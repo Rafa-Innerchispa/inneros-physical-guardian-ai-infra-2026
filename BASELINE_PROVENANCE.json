@@ -1,0 +1,68 @@
+{
+  "schema_version": "1.0",
+  "baseline_recorded_date_utc": "2026-09-09",
+  "hackathon": "AI Infra Summit Hackathon 2026",
+  "status": "pre-kickoff",
+  "canonical_product": {
+    "repository": "Rafa-Innerchispa/inneros-physical-guardian",
+    "commit": "27e3e65bff070716c66a612c9f0c7e790438909c",
+    "relationship": "external permanent product dependency",
+    "source_copied_into_hackathon_repo": false
+  },
+  "hackathon_repository": {
+    "repository": "Rafa-Innerchispa/inneros-physical-guardian-ai-infra-2026",
+    "pre_baseline_commit": "17adf4674ede7157baa723851c7a0f545ece4c5d",
+    "pre_kickoff_allowed_scope": [
+      "planning",
+      "architecture",
+      "provenance disclosure",
+      "dependency inventory",
+      "team preparation",
+      "reproducibility scaffolding"
+    ]
+  },
+  "pre_existing_product_capabilities": [
+    "provider-neutral camera/source contracts",
+    "RTSP and ONVIF ingestion",
+    "Dahua local event/media adapters and real XVR lab validation",
+    "EZVIZ cloud and generic network media adapters",
+    "RT-DETRv2 lab detector backend",
+    "provider-neutral IoU tracking",
+    "zone transitions and temporal anomaly engine",
+    "composed Guardian frame pipeline",
+    "event-driven low-cost edge gateway",
+    "Bellini outbound tunnel-only Windows edge path",
+    "ActionContract and evidence foundations",
+    "sponsor-neutral EdgeRuntimeAdapter",
+    "sponsor-neutral PhysicalIOAdapter",
+    "bounded physical action controller with allowlist/idempotency/dry-run/verification",
+    "Raspberry Pi/GPIO/relay/MQTT/HTTP/Home Assistant physical I/O reference topology"
+  ],
+  "expected_hackathon_contributions": [
+    "assigned sponsor runtime adapter",
+    "sponsor-specific model conversion or optimization",
+    "measured on-site hardware benchmarks",
+    "challenge-specific Guardian composition",
+    "physical closed-loop demo",
+    "judge-facing UI and evidence presentation",
+    "hackathon reproducibility package",
+    "pitch/video/submission assets"
+  ],
+  "not_present_at_baseline": [
+    "SiMa.ai-specific implementation",
+    "Qualcomm-specific implementation",
+    "Intel challenge-specific implementation",
+    "measured sponsor hardware benchmark claims"
+  ],
+  "provenance_labels": [
+    "PRE-EXISTING",
+    "NEW DURING HACKATHON",
+    "ADAPTED DURING HACKATHON",
+    "THIRD-PARTY / SPONSOR TECHNOLOGY"
+  ],
+  "security_boundary": {
+    "customer_credentials_committed": false,
+    "customer_private_video_committed": false,
+    "customer_private_topology_committed": false
+  }
+}
