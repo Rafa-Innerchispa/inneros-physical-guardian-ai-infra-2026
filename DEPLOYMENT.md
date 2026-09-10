@@ -2,6 +2,14 @@
 
 The hackathon judge application is intentionally dependency-light. The default path runs on any Python 3.11+ laptop and binds to loopback only.
 
+## Validate first
+
+```bash
+python3 scripts/self_test.py
+```
+
+Expected final line: `ALL ACCEPTANCE CHECKS PASSED`.
+
 ## Local judge mode
 
 ```bash
@@ -19,21 +27,27 @@ For any network-accessible deployment, configure both variables:
 ```bash
 export GUARDIAN_DEMO_USER="judge"
 export GUARDIAN_DEMO_PASSWORD="<set-outside-git>"
-python3 scripts/run_demo.py --host 0.0.0.0 --port 8787
+python3 scripts/run_demo.py --host 0.0.0.0
 ```
 
-If only one variable is configured the server refuses to start. Credentials are never logged or stored in this repository.
+If only one variable is configured the server refuses to start. Credentials are never logged or stored in this repository. On a hosted platform, inject the password from a secret store rather than a committed file.
 
-## Container
+## Canonical container
 
 Build from the repository root:
 
 ```bash
-docker build -f infra/Dockerfile -t inneros-physical-guardian:ai-infra-2026 .
+docker build -t inneros-physical-guardian:ai-infra-2026 .
 docker run --rm -p 127.0.0.1:8787:8080 inneros-physical-guardian:ai-infra-2026
 ```
 
-For a hosted judge endpoint, inject `GUARDIAN_DEMO_USER` and `GUARDIAN_DEMO_PASSWORD` from the platform secret store. Keep platform-level authentication enabled where practical.
+The root `Dockerfile` is the canonical Cloud Build / Cloud Run path. `infra/Dockerfile` remains aligned as a compatibility copy for earlier hackathon tooling.
+
+The container runs as an unprivileged numeric UID, uses the platform `PORT`, and includes a health check against `/api/health`.
+
+For a hosted judge endpoint, inject `GUARDIAN_DEMO_USER` and `GUARDIAN_DEMO_PASSWORD` from the platform secret store. Keep HTTPS and platform-level access controls enabled where practical.
+
+Detailed hosted guidance: `docs/HOSTED_JUDGE_DEPLOY.md`.
 
 ## Sponsor runtime sidecars
 
