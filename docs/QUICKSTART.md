@@ -1,5 +1,17 @@
 # 60-Second Quickstart
 
+## Validate first
+
+```bash
+python3 scripts/self_test.py
+```
+
+Expected final line:
+
+`ALL ACCEPTANCE CHECKS PASSED`
+
+## Start the judge demo
+
 ```bash
 python3 scripts/run_demo.py
 ```
