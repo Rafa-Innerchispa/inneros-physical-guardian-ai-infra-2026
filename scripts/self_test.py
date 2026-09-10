@@ -8,6 +8,8 @@ import json
 import os
 import sys
 import threading
+from http import HTTPStatus
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
@@ -19,6 +21,7 @@ if str(SRC) not in sys.path:
 
 from guardian_demo.engine import GuardianDemoEngine  # noqa: E402
 from guardian_demo.models import ProposedAction  # noqa: E402
+from guardian_demo.physical_io import ENV_VAR as PHYSICAL_IO_ENV  # noqa: E402
 from guardian_demo.server import ENGINE, build_server  # noqa: E402
 
 
@@ -38,12 +41,48 @@ def request(base: str, path: str, *, method: str = "GET", payload: dict | None =
         return response.status, response.headers.get("Content-Type", ""), response.read().decode("utf-8")
 
 
+class PhysicalIOContractHandler(BaseHTTPRequestHandler):
+    def log_message(self, fmt: str, *args: object) -> None:
+        return
+
+    def _read_json(self) -> dict:
+        length = int(self.headers.get("Content-Length", "0"))
+        payload = json.loads(self.rfile.read(length).decode("utf-8"))
+        if not isinstance(payload, dict):
+            raise ValueError("expected object")
+        return payload
+
+    def _send_json(self, payload: dict) -> None:
+        body = json.dumps(payload).encode("utf-8")
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_POST(self) -> None:  # noqa: N802
+        payload = self._read_json()
+        identity = {
+            key: payload[key]
+            for key in ("action_id", "idempotency_key", "action_type", "target_id")
+        }
+        self.server.requests_seen.append(self.path)  # type: ignore[attr-defined]
+        if self.path == "/v1/action":
+            self._send_json({**identity, "ok": True, "accepted": True})
+            return
+        if self.path == "/v1/verify":
+            self._send_json({**identity, "ok": True, "verified": True, "truth": "PRODUCT_HTTP_READBACK"})
+            return
+        self.send_error(HTTPStatus.NOT_FOUND)
+
+
 def engine_checks() -> None:
     engine = GuardianDemoEngine()
     catalog = engine.catalog()
     runtimes = {row["runtime_id"]: row for row in catalog["runtimes"]}
     check(runtimes["local-deterministic"]["status"] == "READY", "offline deterministic runtime is ready")
     check(runtimes["sima-slot"]["truth"] == "NOT_BENCHMARKED", "SiMa slot does not fabricate a benchmark")
+    check(catalog["physical_io"]["status"] == "FALLBACK_ONLY", "Physical I/O defaults to offline fallback")
     check("unlock_door" in catalog["safety"]["denied_actions"], "high-impact door unlock is explicitly denied")
 
     state = engine.run("loitering_after_hours")
@@ -52,6 +91,7 @@ def engine_checks() -> None:
 
     approved = engine.approve()
     check(approved["current"]["status"] == "VERIFIED", "approved bounded action reaches verified state")
+    check(approved["current"]["truth"]["physical_io"] == "SIMULATED_REFERENCE_IO", "offline approval remains explicitly simulated")
     check(approved["latest_evidence"]["evidence_id"].startswith("ev-"), "verified flow produces sealed evidence id")
 
     engine.reset()
@@ -77,6 +117,30 @@ def engine_checks() -> None:
         raise AssertionError("dangerous action unexpectedly passed approval gate")
 
 
+def physical_io_checks() -> None:
+    server = ThreadingHTTPServer(("127.0.0.1", 0), PhysicalIOContractHandler)
+    server.requests_seen = []  # type: ignore[attr-defined]
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    host, port = server.server_address
+    os.environ[PHYSICAL_IO_ENV] = f"http://{host}:{port}"
+    try:
+        engine = GuardianDemoEngine()
+        check(engine.catalog()["physical_io"]["status"] == "READY_CONFIGURED", "loopback permanent-product I/O bridge becomes ready")
+        engine.run("loitering_after_hours")
+        state = engine.approve()
+        check(state["current"]["status"] == "VERIFIED", "permanent-product HTTP I/O path reaches verified state")
+        check(state["current"]["truth"]["physical_io"] == "PRODUCT_HTTP_READBACK", "HTTP readback is truth-labeled separately from hardware")
+        check(server.requests_seen == ["/v1/action", "/v1/verify"], "approval executes action then readback verification")  # type: ignore[attr-defined]
+        serialized = json.dumps(state["latest_evidence"])
+        check(PHYSICAL_IO_ENV not in serialized and f"{host}:{port}" not in serialized, "Physical I/O endpoint stays out of evidence")
+    finally:
+        os.environ.pop(PHYSICAL_IO_ENV, None)
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=3)
+
+
 def http_checks() -> None:
     previous_user = os.environ.pop("GUARDIAN_DEMO_USER", None)
     previous_password = os.environ.pop("GUARDIAN_DEMO_PASSWORD", None)
@@ -99,9 +163,10 @@ def http_checks() -> None:
             "See. Understand. Decide. Act. Verify. Prove.",
             'id="runBtn"',
             'id="approveBtn"',
+            'id="ioBadge"',
             'id="evidencePreview"',
         )
-        check(all(marker in body for marker in required_ui_markers), "judge WebUI contains critical controls and evidence panel")
+        check(all(marker in body for marker in required_ui_markers), "judge WebUI contains critical controls, I/O status and evidence panel")
 
         state = json.loads(
             request(
@@ -164,9 +229,16 @@ def auth_checks() -> None:
 
 def main() -> int:
     print("InnerOS Physical Guardian — zero-dependency acceptance test\n")
-    engine_checks()
-    http_checks()
-    auth_checks()
+    previous_io = os.environ.pop(PHYSICAL_IO_ENV, None)
+    try:
+        engine_checks()
+        physical_io_checks()
+        http_checks()
+        auth_checks()
+    finally:
+        os.environ.pop(PHYSICAL_IO_ENV, None)
+        if previous_io is not None:
+            os.environ[PHYSICAL_IO_ENV] = previous_io
     print("\nALL ACCEPTANCE CHECKS PASSED")
     return 0
 

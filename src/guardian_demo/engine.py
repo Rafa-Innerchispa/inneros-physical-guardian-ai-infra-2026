@@ -8,6 +8,7 @@ from typing import Any
 from uuid import uuid4
 
 from .models import DemoTrace, ProposedAction
+from .physical_io import PHYSICAL_IO
 from .runtime import RUNTIME_SLOTS, runtime_catalog, runtime_result_to_dict
 
 
@@ -70,6 +71,7 @@ class GuardianDemoEngine:
                 for scenario_id, config in SCENARIOS.items()
             ],
             "runtimes": runtime_catalog(),
+            "physical_io": PHYSICAL_IO.status(),
             "safety": {
                 "allowed_actions": sorted(ALLOWED_ACTIONS),
                 "denied_actions": sorted(DENIED_ACTIONS),
@@ -198,21 +200,65 @@ class GuardianDemoEngine:
             raise PermissionError(f"action denied by bounded demo policy: {action.action_type}")
 
         started = perf_counter()
+        physical_io_result: dict[str, object] | None = None
+        io_status = PHYSICAL_IO.status()
+        if PHYSICAL_IO.can_execute(action.action_type):
+            if io_status["status"] == "INVALID_LOCAL_BRIDGE_CONFIG":
+                return self._fail_action_safe(
+                    "Physical I/O bridge configuration is invalid",
+                    started=started,
+                )
+            if io_status["status"] == "READY_CONFIGURED":
+                try:
+                    physical_io_result = PHYSICAL_IO.execute(action)
+                except RuntimeError as exc:
+                    return self._fail_action_safe(str(exc), started=started)
+
         self.current.decision = "APPROVED"
-        self.current.truth["physical_io"] = "SIMULATED_REFERENCE_IO"
+        physical_io_truth = (
+            str(physical_io_result["truth"])
+            if physical_io_result is not None
+            else "SIMULATED_REFERENCE_IO"
+        )
+        self.current.truth["physical_io"] = physical_io_truth
+        if physical_io_result is not None:
+            self.current.metrics["physical_io_round_trip_ms"] = physical_io_result[
+                "total_round_trip_ms"
+            ]
+
         for stage in self.current.stages:
             if stage["stage"] == "ACT":
-                stage.update(
-                    status="complete",
-                    summary=f"Reference I/O accepted {action.action_type}",
-                    truth="SIMULATED_REFERENCE_IO",
-                )
+                if physical_io_result is not None:
+                    stage.update(
+                        status="complete",
+                        summary=(
+                            "Permanent Physical I/O contract accepted "
+                            f"{physical_io_result['contract_action']}"
+                        ),
+                        truth=physical_io_truth,
+                    )
+                else:
+                    stage.update(
+                        status="complete",
+                        summary=f"Reference I/O accepted {action.action_type}",
+                        truth="SIMULATED_REFERENCE_IO",
+                    )
             elif stage["stage"] == "VERIFY":
-                stage.update(
-                    status="complete",
-                    summary=f"Readback matched expected state for {action.target}",
-                    truth="SIMULATED_REFERENCE_IO",
-                )
+                if physical_io_result is not None:
+                    stage.update(
+                        status="complete",
+                        summary=(
+                            "Permanent Physical I/O readback verified for "
+                            f"{physical_io_result['contract_target']}"
+                        ),
+                        truth=physical_io_truth,
+                    )
+                else:
+                    stage.update(
+                        status="complete",
+                        summary=f"Readback matched expected state for {action.target}",
+                        truth="SIMULATED_REFERENCE_IO",
+                    )
             elif stage["stage"] == "PROVE":
                 stage.update(
                     status="complete",
@@ -224,6 +270,40 @@ class GuardianDemoEngine:
         self.current.status = "VERIFIED"
         self.current.metrics["approval_to_verification_ms"] = round((perf_counter() - started) * 1000.0, 3)
         self.latest_evidence = self._make_evidence(final=True)
+        self.current.evidence_id = self.latest_evidence["evidence_id"]
+        return self.state()
+
+    def _fail_action_safe(self, reason: str, *, started: float) -> dict[str, Any]:
+        if not self.current:
+            raise RuntimeError("no active trace")
+        self.current.decision = "APPROVED"
+        self.current.verified = False
+        self.current.status = "ACTION_FAILED_SAFE"
+        self.current.truth["physical_io"] = "FAILED_CLOSED"
+        self.current.metrics["approval_to_failure_ms"] = round(
+            (perf_counter() - started) * 1000.0, 3
+        )
+        for stage in self.current.stages:
+            if stage["stage"] == "ACT":
+                stage.update(
+                    status="failed_safe",
+                    summary="Physical I/O did not produce an accepted verified output",
+                    truth="FAILED_CLOSED",
+                )
+            elif stage["stage"] == "VERIFY":
+                stage.update(
+                    status="failed_closed",
+                    summary="Physical I/O readback could not be verified",
+                    truth="FAILED_CLOSED",
+                )
+            elif stage["stage"] == "PROVE":
+                stage.update(
+                    status="complete",
+                    summary="Fail-closed decision sealed in evidence bundle",
+                    truth="MEASURED_AND_LABELED",
+                )
+        self.latest_evidence = self._make_evidence(final=True)
+        self.latest_evidence["physical_io_failure"] = reason
         self.current.evidence_id = self.latest_evidence["evidence_id"]
         return self.state()
 
@@ -272,6 +352,7 @@ class GuardianDemoEngine:
             "stages": self.current.stages,
             "metrics": self.current.metrics,
             "truth": self.current.truth,
+            "physical_io_bridge": PHYSICAL_IO.status(),
             "preexisting_product_boundary": "Rafa-Innerchispa/inneros-physical-guardian",
             "hackathon_composition_boundary": "Rafa-Innerchispa/inneros-physical-guardian-ai-infra-2026",
             "final": final,

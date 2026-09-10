@@ -375,3 +375,7 @@ footer { width: min(1600px, calc(100% - 42px)); margin: 14px auto 0; padding: 15
   footer { flex-direction: column; }
   .status-pill#runtimeBadge { display: none; }
 }
+
+/* Fail-closed physical I/O states must be visually distinct from pending work. */
+.stage.failed_safe, .stage.failed_closed { border-color: rgba(255,123,134,.34); background: rgba(255,123,134,.045); }
+.stage.failed_safe > span, .stage.failed_closed > span { color: var(--red); background: rgba(255,123,134,.11); }
