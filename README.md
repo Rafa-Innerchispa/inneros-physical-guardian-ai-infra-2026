@@ -1,83 +1,130 @@
 # InnerOS Physical Guardian — AI Infra Summit 2026
 
-Hackathon-specific repository for the AI Infra Summit Hackathon 2026 submission built on top of the canonical InnerOS Physical Guardian product.
+**Live hackathon build. Functional judge demo.**
+
+InnerOS Physical Guardian turns existing cameras and building sensors into governed Physical AI without forcing customers to replace their security infrastructure.
+
+> **SEE → UNDERSTAND OVER TIME → DECIDE UNDER POLICY → ACT → VERIFY → PROVE**
+
+## Run the judge application
+
+Requires Python 3.11+ and no third-party Python package for the demo runtime.
+
+```bash
+python3 scripts/run_demo.py
+```
+
+Open `http://127.0.0.1:8787`.
+
+The single-screen WebUI includes:
+
+- camera/sensor scenario visualization;
+- normalized perception state;
+- temporal/policy reasoning;
+- explicit human action approval;
+- bounded reference physical I/O;
+- verification/readback state;
+- forensic evidence bundle with truth labels;
+- replaceable SiMa.ai, Qualcomm and Intel runtime slots;
+- measured composition timings clearly separated from simulated data.
+
+Tests:
+
+```bash
+python3 -m pytest -q
+```
+
+## Why this architecture matters
+
+Most buildings do not need another camera platform. They need an intelligence and control layer that can work with the cameras, NVRs, DVRs and sensors they already own.
+
+The permanent Physical Guardian product supplies reusable capabilities for camera ingestion, RTSP/ONVIF, event normalization, detection, tracking, zones, temporal behavior, low-cost edge transport, policy, physical I/O and evidence.
+
+This hackathon repository does **not** copy that product. It implements the hackathon-specific composition, sponsor runtime boundary, judge experience, evidence presentation and deployment path.
+
+Permanent product:
+
+`Rafa-Innerchispa/inneros-physical-guardian`
+
+Hackathon composition:
+
+`Rafa-Innerchispa/inneros-physical-guardian-ai-infra-2026`
+
+## Runtime portability
+
+The judge app has one offline-safe deterministic runtime plus local-only sponsor SDK bridges.
+
+| Runtime | Default state | On-site binding |
+| --- | --- | --- |
+| InnerOS deterministic fixture | Ready | none |
+| SiMa.ai | Awaiting hardware/SDK | `GUARDIAN_SIMA_RUNTIME_URL` |
+| Qualcomm | Awaiting hardware/SDK | `GUARDIAN_QUALCOMM_RUNTIME_URL` |
+| Intel | Awaiting hardware/SDK | `GUARDIAN_INTEL_RUNTIME_URL` |
+
+A sponsor sidecar exposes `POST /infer` on loopback. Once configured, the corresponding runtime becomes selectable in the WebUI without changing Guardian policy, approval, verification or evidence code.
+
+See `docs/SPONSOR_RUNTIME_BRIDGE.md`.
+
+## Truth and benchmark discipline
+
+The default judge path intentionally labels:
+
+- camera event: `SIMULATED_FIXTURE`;
+- offline detections: `SIMULATED_FIXTURE`;
+- policy/temporal logic: `DETERMINISTIC_RULE`;
+- demo physical output: `SIMULATED_REFERENCE_IO` until safe electronics are attached;
+- composition timings: measured live;
+- sponsor benchmark: not claimed until real assigned hardware produces repeatable measurements.
+
+The system will fail closed rather than fabricate sponsor output.
+
+## Safety boundary
+
+Judge actions are low-impact and allowlisted: beacon warning, operator notification and reference attention light. Door unlock, alarm disable, arbitrary shell execution and gate opening are explicitly denied in the demo policy.
+
+Human approval is required before the demo ACT stage can complete.
+
+## Hosted judge mode
+
+Optional HTTP Basic access control is configured only through environment variables:
+
+```bash
+export GUARDIAN_DEMO_USER="judge"
+export GUARDIAN_DEMO_PASSWORD="<secret-outside-git>"
+python3 scripts/run_demo.py --host 0.0.0.0 --port 8787
+```
+
+Container recipe: `infra/Dockerfile`.
+
+Deployment details: `DEPLOYMENT.md`.
+
+## Current hackathon build artifacts
+
+- `app/` — single-screen judge WebUI;
+- `src/guardian_demo/` — demo engine, runtime adapter contract and HTTP server;
+- `scripts/run_demo.py` — one-command application start;
+- `scripts/mock_sponsor_sidecar.py` — contract-only sidecar harness;
+- `tests/` — safety/runtime/server/E2E checks;
+- `docs/LIVE_BUILD_STATUS.md` — exact build-window status and truth boundary;
+- `docs/JUDGE_DEMO_RUNBOOK.md` — 90-second judge presentation flow;
+- `docs/SPONSOR_RUNTIME_BRIDGE.md` — on-site SDK integration contract;
+- `PREEXISTING_DISCLOSURE.md` and `BASELINE_PROVENANCE.json` — frozen provenance boundary.
+
+## Pre-existing work disclosure
+
+This project existed before the hackathon as the permanent InnerOS Physical Guardian product. The pre-kickoff baseline is explicitly disclosed instead of being passed off as work created during the competition.
+
+See:
+
+- `PREEXISTING_DISCLOSURE.md`
+- `BASELINE_PROVENANCE.json`
+- `HACKATHON_SCOPE.md`
+- `docs/PROJECT_BRIEF.md`
+- `docs/TRACK_STRATEGY.md`
+- `docs/ONSITE_HARDWARE_PLAYBOOK.md`
 
 ## Team
 
 **InnerOS Physical Guardian**
 
-LabLab team created on September 9, 2026. Join requests are intentionally open so the team can add complementary on-site talent, especially an English-speaking technical presenter and an Edge AI / embedded optimization engineer.
-
-## One-line thesis
-
-**Turn existing security infrastructure into governed Physical AI without replacing the cameras, recorders, or customer network.**
-
-## Current concept
-
-InnerOS Physical Guardian connects to existing DVRs, NVRs, IP cameras and building sensors, then adds a local-first Physical AI layer for perception, temporal behavior analysis, governed actions and forensic evidence.
-
-The permanent product already has reusable building blocks for:
-
-- Dahua / RTSP / ONVIF camera ingestion;
-- normalized camera and event contracts;
-- detector + tracking + zone transitions;
-- temporal anomaly detection;
-- event-driven low-cost edge gateways;
-- tunnel-only edge deployment for constrained Windows VMS workstations;
-- multi-camera / multi-site product direction;
-- governed action paths;
-- forensic evidence and replay.
-
-For the hackathon, we will **not duplicate the product**. We will build only the sponsor-specific integration, benchmark, demo composition, judge experience and submission evidence needed for the assigned track.
-
-## Real-world validation context
-
-This is not a greenfield simulation-only concept.
-
-- **Home lab, Ecuador:** real Dahua XVR / cameras, local compute and full video-to-event pipeline validation.
-- **Bellini pilot direction:** existing Dahua estates, constrained Windows viewing PC, hybrid edge / central inference without requiring a new GPU server at the customer site.
-- **Product thesis:** support customers who already own CCTV infrastructure and cannot economically replace it just to adopt AI.
-
-## On-site track preference
-
-1. **SiMa.ai** — strongest alignment with low-power, real-time Physical AI at the camera/building edge.
-2. **Qualcomm** — strong fit for model-to-device and portable on-device inference.
-3. **Intel Physical AI** — valuable VLA / Physical AI experimentation, but less directly aligned with the current building-security product than the first two.
-
-Speechmatics is considered a complementary bonus layer only if voice materially improves the operator workflow.
-
-## Team recruiting focus
-
-Open to join requests, with preference for teammates who add capabilities we do not already have:
-
-- fluent English technical presenter / pitch lead;
-- Edge AI / embedded / on-device optimization engineer;
-- computer vision deployment experience;
-- demo UX and technical storytelling.
-
-The goal is a small, execution-focused team, not maximum headcount.
-
-## Relationship to the product
-
-Permanent technology lives in:
-
-`Rafa-Innerchispa/inneros-physical-guardian`
-
-This repository exists only for hackathon-specific work: sponsor integrations, challenge adapters, demo composition, benchmarks, evidence and submission assets.
-
-## Pre-kickoff boundary
-
-Before the official build window begins, this repository is limited to planning, architecture, disclosure, team preparation, dependency inventory and reproducibility scaffolding. New sponsor-specific implementation begins only after the official rules/build window permit it.
-
-See:
-
-- `PREEXISTING_DISCLOSURE.md`
-- `HACKATHON_SCOPE.md`
-- `LABLAB_TEAM_PROFILE.md`
-- `docs/PROJECT_BRIEF.md`
-- `docs/TRACK_STRATEGY.md`
-- `docs/TEAM_RECRUITING.md`
-- `docs/DEMO_STORY.md`
-- `docs/ENGLISH_PITCH.md`
-- `docs/SUBMISSION_DRAFT.md`
-- `docs/PREKICKOFF_CHECKLIST.md`
+The team is intentionally kept small. Priority additions are a fluent English technical presenter and hands-on Edge AI / embedded optimization talent who can contribute directly to the existing build.
