@@ -41,3 +41,41 @@ jobs:
 
       - name: Diff hygiene
         run: git diff --check
+
+  container-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build judge container
+        run: docker build -f infra/Dockerfile -t guardian-judge-ci .
+
+      - name: Start judge container
+        run: docker run -d --name guardian-judge-ci -p 127.0.0.1:8787:8080 guardian-judge-ci
+
+      - name: Verify health and WebUI
+        shell: bash
+        run: |
+          set -euo pipefail
+          ready=0
+          for attempt in {1..20}; do
+            if curl -fsS http://127.0.0.1:8787/api/health > /tmp/guardian-health.json; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          test "$ready" = "1"
+          grep -q '"ok": true' /tmp/guardian-health.json
+          curl -fsS http://127.0.0.1:8787/ > /tmp/guardian-index.html
+          grep -q 'Physical Guardian' /tmp/guardian-index.html
+          grep -q 'Run live decision' /tmp/guardian-index.html
+
+      - name: Show container diagnostics on failure
+        if: failure()
+        run: docker logs guardian-judge-ci || true
+
+      - name: Stop judge container
+        if: always()
+        run: docker rm -f guardian-judge-ci || true
