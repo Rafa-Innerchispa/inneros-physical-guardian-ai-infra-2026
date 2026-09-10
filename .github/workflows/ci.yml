@@ -48,8 +48,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build judge container
-        run: docker build -f infra/Dockerfile -t guardian-judge-ci .
+      - name: Build Cloud Run compatible judge container
+        run: docker build -t guardian-judge-ci .
 
       - name: Start judge container
         run: docker run -d --name guardian-judge-ci -p 127.0.0.1:8787:8080 guardian-judge-ci
