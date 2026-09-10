@@ -3,193 +3,247 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#07111f" />
+  <meta name="theme-color" content="#06111f" />
   <title>InnerOS Physical Guardian | AI Infra Summit 2026</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-  <div class="app-shell">
-    <header class="topbar">
-      <div class="brand-wrap">
-        <div class="brand-mark" aria-hidden="true">IG</div>
-        <div>
-          <div class="eyebrow">INNEROS · PHYSICAL AI CONTROL PLANE</div>
+  <div class="app-shell workforce-shell">
+    <aside class="sidebar" aria-label="Physical Guardian navigation">
+      <div class="sidebar-brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 3 4.5 6.2v5.2c0 4.8 3.1 8.2 7.5 9.6 4.4-1.4 7.5-4.8 7.5-9.6V6.2L12 3Z"/><path d="m9 12 2 2 4-4"/></svg>
+        </div>
+        <div class="brand-copy">
+          <strong>InnerOS</strong>
+          <small>Physical Guardian</small>
+        </div>
+      </div>
+
+      <nav class="side-nav">
+        <div class="nav-group">
+          <span class="nav-label">Overview</span>
+          <a class="nav-item active" href="#overview">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            <span>Dashboard</span>
+          </a>
+        </div>
+        <div class="nav-group">
+          <span class="nav-label">Monitor</span>
+          <a class="nav-item" href="#live-monitor">
+            <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="13" rx="2"/><path d="m8 21 4-3 4 3"/><path d="m9 11 2 2 4-4"/></svg>
+            <span>Live Monitor</span>
+          </a>
+          <a class="nav-item" href="#decision-gate">
+            <svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.5 2.8 7.6 7 9 4.2-1.4 7-4.5 7-9V6l-7-3Z"/><path d="M9 12h6"/></svg>
+            <span>Decision Gate</span>
+          </a>
+        </div>
+        <div class="nav-group">
+          <span class="nav-label">Proof</span>
+          <a class="nav-item" href="#runtime-section">
+            <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3"/></svg>
+            <span>Hardware & Runtime</span>
+          </a>
+          <a class="nav-item" href="#evidence-section">
+            <svg viewBox="0 0 24 24"><path d="M6 3h9l3 3v15H6z"/><path d="M15 3v4h4M9 12h6M9 16h6M9 8h2"/></svg>
+            <span>Evidence</span>
+          </a>
+        </div>
+      </nav>
+
+      <div class="sidebar-status">
+        <span class="sidebar-kicker"><i class="pulse-dot"></i> LIVE BUILD</span>
+        <strong>AI Infra Summit 2026</strong>
+        <small>Governed Physical AI · Santa Clara</small>
+      </div>
+    </aside>
+
+    <div class="content-shell">
+      <header class="topbar">
+        <div class="mobile-brand">
+          <div class="brand-mark" aria-hidden="true">IG</div>
+        </div>
+        <div class="page-heading">
+          <span class="eyebrow">PHYSICAL AI CONTROL PLANE</span>
           <h1>Physical Guardian</h1>
+          <p>Observe, reason, approve, act, verify and preserve evidence.</p>
         </div>
-      </div>
-      <div class="topbar-actions">
-        <span class="status-pill status-live"><span class="pulse-dot"></span> LIVE BUILD</span>
-        <span class="status-pill" id="runtimeBadge">Offline runtime ready</span>
-        <span class="status-pill" id="ioBadge">Physical I/O fallback</span>
-        <button class="ghost-btn" id="resetBtn" type="button">Reset</button>
-      </div>
-    </header>
+        <div class="topbar-actions">
+          <span class="status-pill status-live"><span class="pulse-dot"></span> LIVE</span>
+          <span class="status-pill" id="runtimeBadge">Offline runtime ready</span>
+          <span class="status-pill" id="ioBadge">Physical I/O fallback</span>
+          <button class="ghost-btn" id="resetBtn" type="button">Reset</button>
+        </div>
+      </header>
 
-    <main class="dashboard">
-      <section class="hero-card panel">
-        <div class="panel-head">
+      <main class="dashboard">
+        <section class="hero-card panel" id="overview">
+          <div class="panel-head">
+            <div>
+              <span class="section-kicker">JUDGE MODE</span>
+              <h2>See. Understand. Decide. Act. Verify. Prove.</h2>
+              <p class="hero-copy">One governed control loop from an existing camera event to a bounded physical action and forensic proof.</p>
+            </div>
+            <div class="truth-legend">
+              <span><i class="legend-dot measured"></i>Measured</span>
+              <span><i class="legend-dot deterministic"></i>Deterministic</span>
+              <span><i class="legend-dot simulated"></i>Simulated fixture</span>
+            </div>
+          </div>
+
+          <div class="control-strip">
+            <label>
+              <span>Scenario</span>
+              <select id="scenarioSelect">
+                <option value="loitering_after_hours">After-hours loitering</option>
+                <option value="repeated_access_attempt">Repeated access attempt</option>
+                <option value="restricted_zone_entry">Restricted equipment zone</option>
+              </select>
+            </label>
+            <label>
+              <span>Inference target</span>
+              <select id="runtimeSelect"></select>
+            </label>
+            <button class="primary-btn" id="runBtn" type="button">Run live decision</button>
+            <div class="keyboard-hint">R run · A approve · X reset</div>
+          </div>
+        </section>
+
+        <section class="workspace-grid" id="live-monitor">
+          <article class="camera-card panel">
+            <div class="panel-head compact">
+              <div>
+                <span class="section-kicker">LIVE MONITOR</span>
+                <h3>Camera / sensor event</h3>
+              </div>
+              <span class="camera-state" id="cameraState">Fixture standby</span>
+            </div>
+            <div class="camera-stage" id="cameraStage">
+              <div class="camera-noise"></div>
+              <div class="camera-grid"></div>
+              <div class="zone zone-a"><span id="zoneLabel">RESTRICTED ZONE</span></div>
+              <div class="subject" id="subjectBox">
+                <span class="subject-label" id="subjectLabel">PERSON · --</span>
+              </div>
+              <div class="camera-meta">
+                <span>CAM-EDGE-04</span>
+                <span id="cameraClock">--:--:-- UTC</span>
+              </div>
+              <div class="scanline"></div>
+            </div>
+            <div class="event-summary">
+              <span class="severity-badge" id="severityBadge">STANDBY</span>
+              <div>
+                <strong id="eventTitle">Ready for deterministic judge scenario</strong>
+                <p id="eventText">No customer footage or private camera topology is required for this fallback demo.</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="pipeline-card panel">
+            <div class="panel-head compact">
+              <div>
+                <span class="section-kicker">GUARDIAN LOOP</span>
+                <h3>Physical AI reasoning chain</h3>
+              </div>
+              <span class="trace-id" id="traceId">No active trace</span>
+            </div>
+            <div class="pipeline" id="pipeline">
+              <div class="stage" data-stage="SEE"><span>01</span><div><strong>SEE</strong><small>Awaiting event</small></div></div>
+              <div class="stage" data-stage="UNDERSTAND"><span>02</span><div><strong>UNDERSTAND</strong><small>Normalize perception</small></div></div>
+              <div class="stage" data-stage="DECIDE"><span>03</span><div><strong>DECIDE</strong><small>Policy + temporal context</small></div></div>
+              <div class="stage" data-stage="ACT"><span>04</span><div><strong>ACT</strong><small>Bounded action only</small></div></div>
+              <div class="stage" data-stage="VERIFY"><span>05</span><div><strong>VERIFY</strong><small>Readback / expected state</small></div></div>
+              <div class="stage" data-stage="PROVE"><span>06</span><div><strong>PROVE</strong><small>Seal evidence</small></div></div>
+            </div>
+          </article>
+
+          <article class="decision-card panel" id="decision-gate">
+            <div class="panel-head compact">
+              <div>
+                <span class="section-kicker">HUMAN GOVERNANCE</span>
+                <h3>Action gate</h3>
+              </div>
+              <span class="policy-badge" id="policyBadge">Fail-closed</span>
+            </div>
+            <div class="decision-empty" id="decisionEmpty">
+              <div class="shield-icon">✓</div>
+              <strong>No physical action pending</strong>
+              <p>Guardian will propose only an allowlisted low-impact action. Human approval remains explicit.</p>
+            </div>
+            <div class="decision-content hidden" id="decisionContent">
+              <span class="decision-label">PROPOSED ACTION</span>
+              <h4 id="actionTitle">Beacon warning</h4>
+              <p id="actionReason"></p>
+              <dl class="action-meta">
+                <div><dt>Target</dt><dd id="actionTarget">—</dd></div>
+                <div><dt>Impact</dt><dd id="actionImpact">LOW</dd></div>
+                <div><dt>Approval</dt><dd>REQUIRED</dd></div>
+              </dl>
+              <div class="decision-actions">
+                <button class="approve-btn" id="approveBtn" type="button">Approve bounded action</button>
+                <button class="reject-btn" id="rejectBtn" type="button">Reject</button>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="lower-grid">
+          <article class="metrics-card panel">
+            <div class="panel-head compact">
+              <div>
+                <span class="section-kicker">TRUTHFUL METRICS</span>
+                <h3>Measured vs simulated</h3>
+              </div>
+            </div>
+            <div class="metric-grid">
+              <div class="metric"><span>Proposal overhead</span><strong id="proposalMetric">—</strong><small>measured composition only</small></div>
+              <div class="metric"><span>Approval → verify</span><strong id="verifyMetric">—</strong><small>measured approval / I/O path</small></div>
+              <div class="metric"><span>Inference</span><strong id="inferenceMetric">Fixture</strong><small id="inferenceTruth">not benchmarked</small></div>
+              <div class="metric"><span>Evidence</span><strong id="evidenceMetric">Pending</strong><small>SHA-256 sealed bundle</small></div>
+            </div>
+          </article>
+
+          <article class="runtime-card panel" id="runtime-section">
+            <div class="panel-head compact">
+              <div>
+                <span class="section-kicker">HARDWARE & RUNTIME</span>
+                <h3>Replaceable inference slots</h3>
+              </div>
+            </div>
+            <div class="runtime-list" id="runtimeList"></div>
+          </article>
+
+          <article class="evidence-card panel" id="evidence-section">
+            <div class="panel-head compact">
+              <div>
+                <span class="section-kicker">FORENSIC REPLAY</span>
+                <h3>Evidence bundle</h3>
+              </div>
+              <button class="mini-btn" id="copyEvidenceBtn" type="button">Copy JSON</button>
+            </div>
+            <pre id="evidencePreview">Run a scenario to generate evidence.</pre>
+          </article>
+        </section>
+
+        <section class="pitch-card panel">
           <div>
-            <span class="section-kicker">JUDGE MODE</span>
-            <h2>See. Understand. Decide. Act. Verify. Prove.</h2>
+            <span class="section-kicker">PITCH CUE</span>
+            <p id="pitchCue"><strong>Physical Guardian does not replace your cameras.</strong> It adds a governed intelligence layer that observes, reasons over time, acts safely, verifies the result, and preserves proof.</p>
           </div>
-          <div class="truth-legend">
-            <span><i class="legend-dot measured"></i>Measured</span>
-            <span><i class="legend-dot deterministic"></i>Deterministic</span>
-            <span><i class="legend-dot simulated"></i>Simulated fixture</span>
+          <div class="pitch-proof">
+            <span>Existing camera estate</span><b>→</b><span>Replaceable AI runtime</span><b>→</b><span>Governed physical action</span>
           </div>
-        </div>
+        </section>
 
-        <div class="control-strip">
-          <label>
-            <span>Scenario</span>
-            <select id="scenarioSelect">
-              <option value="loitering_after_hours">After-hours loitering</option>
-              <option value="repeated_access_attempt">Repeated access attempt</option>
-              <option value="restricted_zone_entry">Restricted equipment zone</option>
-            </select>
-          </label>
-          <label>
-            <span>Inference target</span>
-            <select id="runtimeSelect"></select>
-          </label>
-          <button class="primary-btn" id="runBtn" type="button">Run live decision</button>
-          <div class="keyboard-hint">R run · A approve · X reset</div>
-        </div>
-      </section>
-
-      <section class="workspace-grid">
-        <article class="camera-card panel">
-          <div class="panel-head compact">
-            <div>
-              <span class="section-kicker">INPUT</span>
-              <h3>Camera / sensor event</h3>
-            </div>
-            <span class="camera-state" id="cameraState">Fixture standby</span>
-          </div>
-          <div class="camera-stage" id="cameraStage">
-            <div class="camera-noise"></div>
-            <div class="camera-grid"></div>
-            <div class="zone zone-a"><span id="zoneLabel">RESTRICTED ZONE</span></div>
-            <div class="subject" id="subjectBox">
-              <span class="subject-label" id="subjectLabel">PERSON · --</span>
-            </div>
-            <div class="camera-meta">
-              <span>CAM-EDGE-04</span>
-              <span id="cameraClock">--:--:-- UTC</span>
-            </div>
-            <div class="scanline"></div>
-          </div>
-          <div class="event-summary">
-            <span class="severity-badge" id="severityBadge">STANDBY</span>
-            <div>
-              <strong id="eventTitle">Ready for deterministic judge scenario</strong>
-              <p id="eventText">No customer footage or private camera topology is required for this fallback demo.</p>
-            </div>
-          </div>
-        </article>
-
-        <article class="pipeline-card panel">
-          <div class="panel-head compact">
-            <div>
-              <span class="section-kicker">GUARDIAN LOOP</span>
-              <h3>Physical AI reasoning chain</h3>
-            </div>
-            <span class="trace-id" id="traceId">No active trace</span>
-          </div>
-          <div class="pipeline" id="pipeline">
-            <div class="stage" data-stage="SEE"><span>01</span><div><strong>SEE</strong><small>Awaiting event</small></div></div>
-            <div class="stage" data-stage="UNDERSTAND"><span>02</span><div><strong>UNDERSTAND</strong><small>Normalize perception</small></div></div>
-            <div class="stage" data-stage="DECIDE"><span>03</span><div><strong>DECIDE</strong><small>Policy + temporal context</small></div></div>
-            <div class="stage" data-stage="ACT"><span>04</span><div><strong>ACT</strong><small>Bounded action only</small></div></div>
-            <div class="stage" data-stage="VERIFY"><span>05</span><div><strong>VERIFY</strong><small>Readback / expected state</small></div></div>
-            <div class="stage" data-stage="PROVE"><span>06</span><div><strong>PROVE</strong><small>Seal evidence</small></div></div>
-          </div>
-        </article>
-
-        <article class="decision-card panel">
-          <div class="panel-head compact">
-            <div>
-              <span class="section-kicker">HUMAN GOVERNANCE</span>
-              <h3>Action gate</h3>
-            </div>
-            <span class="policy-badge" id="policyBadge">Fail-closed</span>
-          </div>
-          <div class="decision-empty" id="decisionEmpty">
-            <div class="shield-icon">✓</div>
-            <strong>No physical action pending</strong>
-            <p>Guardian will propose only an allowlisted low-impact action. Human approval remains explicit.</p>
-          </div>
-          <div class="decision-content hidden" id="decisionContent">
-            <span class="decision-label">PROPOSED ACTION</span>
-            <h4 id="actionTitle">Beacon warning</h4>
-            <p id="actionReason"></p>
-            <dl class="action-meta">
-              <div><dt>Target</dt><dd id="actionTarget">—</dd></div>
-              <div><dt>Impact</dt><dd id="actionImpact">LOW</dd></div>
-              <div><dt>Approval</dt><dd>REQUIRED</dd></div>
-            </dl>
-            <div class="decision-actions">
-              <button class="approve-btn" id="approveBtn" type="button">Approve bounded action</button>
-              <button class="reject-btn" id="rejectBtn" type="button">Reject</button>
-            </div>
-          </div>
-        </article>
-      </section>
-
-      <section class="lower-grid">
-        <article class="metrics-card panel">
-          <div class="panel-head compact">
-            <div>
-              <span class="section-kicker">TRUTHFUL METRICS</span>
-              <h3>What is measured vs simulated</h3>
-            </div>
-          </div>
-          <div class="metric-grid">
-            <div class="metric"><span>Proposal overhead</span><strong id="proposalMetric">—</strong><small>measured composition only</small></div>
-            <div class="metric"><span>Approval → verify</span><strong id="verifyMetric">—</strong><small>measured approval / I/O path</small></div>
-            <div class="metric"><span>Inference</span><strong id="inferenceMetric">Fixture</strong><small id="inferenceTruth">not benchmarked</small></div>
-            <div class="metric"><span>Evidence</span><strong id="evidenceMetric">Pending</strong><small>SHA-256 sealed bundle</small></div>
-          </div>
-        </article>
-
-        <article class="runtime-card panel">
-          <div class="panel-head compact">
-            <div>
-              <span class="section-kicker">REPLACEABLE INFERENCE</span>
-              <h3>Hardware adapter slots</h3>
-            </div>
-          </div>
-          <div class="runtime-list" id="runtimeList"></div>
-        </article>
-
-        <article class="evidence-card panel">
-          <div class="panel-head compact">
-            <div>
-              <span class="section-kicker">FORENSIC REPLAY</span>
-              <h3>Evidence bundle</h3>
-            </div>
-            <button class="mini-btn" id="copyEvidenceBtn" type="button">Copy JSON</button>
-          </div>
-          <pre id="evidencePreview">Run a scenario to generate evidence.</pre>
-        </article>
-      </section>
-
-      <section class="pitch-card panel">
-        <div>
-          <span class="section-kicker">PITCH CUE</span>
-          <p id="pitchCue"><strong>Physical Guardian does not replace your cameras.</strong> It adds a governed intelligence layer that observes, reasons over time, acts safely, verifies the result, and preserves proof.</p>
-        </div>
-        <div class="pitch-proof">
-          <span>Existing camera estate</span><b>→</b><span>Replaceable AI runtime</span><b>→</b><span>Policy-governed physical action</span>
-        </div>
-      </section>
-    </main>
-
-    <footer>
-      <span>AI Infra Summit Hackathon · Santa Clara · Sep 2026</span>
-      <span>Hackathon composition layer · Pre-existing product provenance disclosed</span>
-    </footer>
+        <footer>
+          <span>AI Infra Summit Hackathon · Santa Clara · Sep 2026</span>
+          <span>Hackathon composition layer · Pre-existing product provenance disclosed</span>
+        </footer>
+      </main>
+    </div>
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
