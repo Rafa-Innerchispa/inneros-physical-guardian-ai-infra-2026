@@ -21,6 +21,7 @@
       <div class="topbar-actions">
         <span class="status-pill status-live"><span class="pulse-dot"></span> LIVE BUILD</span>
         <span class="status-pill" id="runtimeBadge">Offline runtime ready</span>
+        <span class="status-pill" id="ioBadge">Physical I/O fallback</span>
         <button class="ghost-btn" id="resetBtn" type="button">Reset</button>
       </div>
     </header>
@@ -146,7 +147,7 @@
           </div>
           <div class="metric-grid">
             <div class="metric"><span>Proposal overhead</span><strong id="proposalMetric">—</strong><small>measured composition only</small></div>
-            <div class="metric"><span>Approval → verify</span><strong id="verifyMetric">—</strong><small>measured reference I/O path</small></div>
+            <div class="metric"><span>Approval → verify</span><strong id="verifyMetric">—</strong><small>measured approval / I/O path</small></div>
             <div class="metric"><span>Inference</span><strong id="inferenceMetric">Fixture</strong><small id="inferenceTruth">not benchmarked</small></div>
             <div class="metric"><span>Evidence</span><strong id="evidenceMetric">Pending</strong><small>SHA-256 sealed bundle</small></div>
           </div>

@@ -4,6 +4,7 @@ const els = {
   scenarioSelect: $("scenarioSelect"),
   runtimeSelect: $("runtimeSelect"),
   runtimeBadge: $("runtimeBadge"),
+  ioBadge: $("ioBadge"),
   runBtn: $("runBtn"),
   resetBtn: $("resetBtn"),
   approveBtn: $("approveBtn"),
@@ -52,6 +53,7 @@ const scenarioCopy = {
 };
 
 let latestState = null;
+let physicalIoCatalog = null;
 let toastTimer = null;
 
 function showToast(message, error = false) {
@@ -97,9 +99,36 @@ function formatMs(value) {
   return typeof value === "number" ? `${value.toFixed(Math.min(value < 1 ? 3 : 2, 3))} ms` : "—";
 }
 
+function renderIoBadge(trace = null) {
+  const truth = trace?.truth?.physical_io;
+  if (truth === "REAL_LOW_VOLTAGE_HARDWARE") {
+    els.ioBadge.textContent = "Hardware readback verified";
+    return;
+  }
+  if (truth === "PRODUCT_HTTP_READBACK") {
+    els.ioBadge.textContent = "Product I/O readback verified";
+    return;
+  }
+  if (truth === "FAILED_CLOSED") {
+    els.ioBadge.textContent = "Physical I/O failed closed";
+    return;
+  }
+  if (physicalIoCatalog?.status === "READY_CONFIGURED") {
+    els.ioBadge.textContent = "Physical I/O bridge ready";
+    return;
+  }
+  if (physicalIoCatalog?.status === "INVALID_LOCAL_BRIDGE_CONFIG") {
+    els.ioBadge.textContent = "Physical I/O config invalid";
+    return;
+  }
+  els.ioBadge.textContent = "Physical I/O fallback";
+}
+
 function renderCatalog(catalog) {
   els.runtimeSelect.innerHTML = "";
   els.runtimeList.innerHTML = "";
+  physicalIoCatalog = catalog.physical_io || null;
+  renderIoBadge();
 
   for (const runtime of catalog.runtimes || []) {
     const option = document.createElement("option");
@@ -172,6 +201,8 @@ function renderEvidence(evidence) {
     decision: evidence.decision,
     verified: evidence.verified,
     runtime_id: evidence.runtime_id,
+    physical_io_bridge: evidence.physical_io_bridge,
+    physical_io_failure: evidence.physical_io_failure,
     truth: evidence.truth,
     metrics: evidence.metrics,
   };
@@ -185,6 +216,7 @@ function renderState(state) {
   renderEvidence(state.latest_evidence);
 
   if (!trace) {
+    renderIoBadge();
     els.cameraState.textContent = "Fixture standby";
     els.subjectBox.classList.remove("active");
     els.subjectLabel.textContent = "PERSON · --";
@@ -208,16 +240,19 @@ function renderState(state) {
     return;
   }
 
+  renderIoBadge(trace);
   if (trace.status === "VERIFIED") {
     els.cameraState.textContent = "Verified event";
   } else if (trace.status === "REJECTED_SAFE") {
     els.cameraState.textContent = "Safe no-op";
+  } else if (trace.status === "ACTION_FAILED_SAFE") {
+    els.cameraState.textContent = "Action failed safe";
   } else {
     els.cameraState.textContent = "Event active";
   }
   els.subjectBox.classList.add("active");
   const scenario = scenarioCopy[trace.scenario] || {};
-  const decide = trace.stages?.find((s) => s.stage === "DECIDE") || {};
+  const decideStage = trace.stages?.find((s) => s.stage === "DECIDE") || {};
   const see = trace.stages?.find((s) => s.stage === "SEE") || {};
   const understand = trace.stages?.find((s) => s.stage === "UNDERSTAND");
   const detection = understand?.runtime?.detections?.[0];
@@ -229,8 +264,8 @@ function renderState(state) {
     els.subjectLabel.textContent = "OBJECT · --";
     els.zoneLabel.textContent = "ACTIVE ZONE";
   }
-  els.severityBadge.className = `severity-badge ${(decide.severity || "").toLowerCase()}`;
-  els.severityBadge.textContent = (decide.severity || "EVENT").toUpperCase();
+  els.severityBadge.className = `severity-badge ${(decideStage.severity || "").toLowerCase()}`;
+  els.severityBadge.textContent = (decideStage.severity || "EVENT").toUpperCase();
   els.eventTitle.textContent = scenario.title || trace.scenario;
   els.eventText.textContent = see.summary || "Guardian event received";
   els.traceId.textContent = trace.trace_id;
@@ -248,11 +283,13 @@ function renderState(state) {
   } else {
     els.decisionEmpty.classList.remove("hidden");
     els.decisionContent.classList.add("hidden");
-    const decisionText = trace.decision === "APPROVED"
-      ? "Action verified and evidence sealed."
-      : trace.decision === "REJECTED"
-        ? "Operator rejected action. Safe no-op verified."
-        : "No physical action pending.";
+    const decisionText = trace.status === "ACTION_FAILED_SAFE"
+      ? "Action failed closed. No verified output accepted."
+      : trace.decision === "APPROVED"
+        ? "Action verified and evidence sealed."
+        : trace.decision === "REJECTED"
+          ? "Operator rejected action. Safe no-op verified."
+          : "No physical action pending.";
     els.decisionEmpty.querySelector("strong").textContent = decisionText;
     els.decisionEmpty.querySelector("p").textContent = trace.evidence_id
       ? `Evidence ${trace.evidence_id} preserves the decision, truth labels, and measured composition timings.`
@@ -261,7 +298,9 @@ function renderState(state) {
   }
 
   els.proposalMetric.textContent = formatMs(trace.metrics?.composition_to_proposal_ms);
-  els.verifyMetric.textContent = formatMs(trace.metrics?.approval_to_verification_ms);
+  els.verifyMetric.textContent = formatMs(
+    trace.metrics?.approval_to_verification_ms ?? trace.metrics?.approval_to_failure_ms,
+  );
   els.inferenceMetric.textContent = understand?.runtime?.model || "Fixture";
   els.inferenceTruth.textContent = (understand?.truth || "unknown").replaceAll("_", " ").toLowerCase();
   els.pitchCue.textContent = scenario.cue || "Guardian converts perception into policy-governed physical action with verification and evidence.";
@@ -290,7 +329,11 @@ async function decide(path, successText) {
   try {
     const state = await api(path, { method: "POST", body: "{}" });
     renderState(state);
-    showToast(successText);
+    if (state.current?.status === "ACTION_FAILED_SAFE") {
+      showToast("Physical I/O failed closed; evidence was preserved.", true);
+    } else {
+      showToast(successText);
+    }
   } catch (error) {
     showToast(error.message, true);
   }
@@ -334,6 +377,7 @@ async function boot() {
   } catch (error) {
     showToast(`Backend unavailable: ${error.message}`, true);
     els.runtimeBadge.textContent = "Backend unavailable";
+    els.ioBadge.textContent = "Backend unavailable";
   }
 }
 
