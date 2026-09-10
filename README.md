@@ -28,7 +28,17 @@ The single-screen WebUI includes:
 - replaceable SiMa.ai, Qualcomm and Intel runtime slots;
 - measured composition timings clearly separated from simulated data.
 
-Tests:
+## Zero-dependency acceptance check
+
+A clean Python host can validate the application without installing pytest or any package:
+
+```bash
+python3 scripts/self_test.py
+```
+
+The acceptance script boots an ephemeral loopback server and verifies the offline runtime, human approval gate, safe reject path, dangerous-action fail-closed behavior, WebUI delivery, HTTP demo flow, evidence production and optional hosted authentication.
+
+The developer test suite remains available when pytest is installed:
 
 ```bash
 python3 -m pytest -q
@@ -103,8 +113,9 @@ Deployment details: `DEPLOYMENT.md`.
 - `app/` — single-screen judge WebUI;
 - `src/guardian_demo/` — demo engine, runtime adapter contract and HTTP server;
 - `scripts/run_demo.py` — one-command application start;
+- `scripts/self_test.py` — zero-dependency acceptance test;
 - `scripts/mock_sponsor_sidecar.py` — contract-only sidecar harness;
-- `tests/` — safety/runtime/server/E2E checks;
+- `tests/` — extended safety/runtime/server/E2E developer checks;
 - `docs/LIVE_BUILD_STATUS.md` — exact build-window status and truth boundary;
 - `docs/JUDGE_DEMO_RUNBOOK.md` — 90-second judge presentation flow;
 - `docs/SPONSOR_RUNTIME_BRIDGE.md` — on-site SDK integration contract;

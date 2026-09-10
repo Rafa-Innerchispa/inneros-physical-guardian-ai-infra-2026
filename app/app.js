@@ -12,6 +12,8 @@ const els = {
   cameraState: $("cameraState"),
   cameraClock: $("cameraClock"),
   subjectBox: $("subjectBox"),
+  subjectLabel: $("subjectLabel"),
+  zoneLabel: $("zoneLabel"),
   severityBadge: $("severityBadge"),
   eventTitle: $("eventTitle"),
   eventText: $("eventText"),
@@ -82,6 +84,13 @@ function humanizeAction(actionType) {
     .split("_")
     .map((token) => token.charAt(0).toUpperCase() + token.slice(1))
     .join(" ");
+}
+
+function humanizeZone(zone) {
+  return String(zone || "restricted-zone")
+    .replaceAll("-", " ")
+    .replaceAll("_", " ")
+    .toUpperCase();
 }
 
 function formatMs(value) {
@@ -178,6 +187,8 @@ function renderState(state) {
   if (!trace) {
     els.cameraState.textContent = "Fixture standby";
     els.subjectBox.classList.remove("active");
+    els.subjectLabel.textContent = "PERSON · --";
+    els.zoneLabel.textContent = "RESTRICTED ZONE";
     els.severityBadge.className = "severity-badge";
     els.severityBadge.textContent = "STANDBY";
     els.eventTitle.textContent = "Ready for deterministic judge scenario";
@@ -185,6 +196,8 @@ function renderState(state) {
     els.traceId.textContent = "No active trace";
     els.decisionEmpty.classList.remove("hidden");
     els.decisionContent.classList.add("hidden");
+    els.decisionEmpty.querySelector("strong").textContent = "No physical action pending";
+    els.decisionEmpty.querySelector("p").textContent = "Guardian will propose only an allowlisted low-impact action. Human approval remains explicit.";
     els.policyBadge.textContent = "Fail-closed";
     els.proposalMetric.textContent = "—";
     els.verifyMetric.textContent = "—";
@@ -195,11 +208,27 @@ function renderState(state) {
     return;
   }
 
-  els.cameraState.textContent = trace.status === "VERIFIED" ? "Verified event" : "Event active";
+  if (trace.status === "VERIFIED") {
+    els.cameraState.textContent = "Verified event";
+  } else if (trace.status === "REJECTED_SAFE") {
+    els.cameraState.textContent = "Safe no-op";
+  } else {
+    els.cameraState.textContent = "Event active";
+  }
   els.subjectBox.classList.add("active");
   const scenario = scenarioCopy[trace.scenario] || {};
   const decide = trace.stages?.find((s) => s.stage === "DECIDE") || {};
   const see = trace.stages?.find((s) => s.stage === "SEE") || {};
+  const understand = trace.stages?.find((s) => s.stage === "UNDERSTAND");
+  const detection = understand?.runtime?.detections?.[0];
+  if (detection) {
+    const confidence = typeof detection.confidence === "number" ? detection.confidence.toFixed(2) : "--";
+    els.subjectLabel.textContent = `${String(detection.label || "object").toUpperCase()} · ${confidence}`;
+    els.zoneLabel.textContent = humanizeZone(detection.zone);
+  } else {
+    els.subjectLabel.textContent = "OBJECT · --";
+    els.zoneLabel.textContent = "ACTIVE ZONE";
+  }
   els.severityBadge.className = `severity-badge ${(decide.severity || "").toLowerCase()}`;
   els.severityBadge.textContent = (decide.severity || "EVENT").toUpperCase();
   els.eventTitle.textContent = scenario.title || trace.scenario;
@@ -233,7 +262,6 @@ function renderState(state) {
 
   els.proposalMetric.textContent = formatMs(trace.metrics?.composition_to_proposal_ms);
   els.verifyMetric.textContent = formatMs(trace.metrics?.approval_to_verification_ms);
-  const understand = trace.stages?.find((s) => s.stage === "UNDERSTAND");
   els.inferenceMetric.textContent = understand?.runtime?.model || "Fixture";
   els.inferenceTruth.textContent = (understand?.truth || "unknown").replaceAll("_", " ").toLowerCase();
   els.pitchCue.textContent = scenario.cue || "Guardian converts perception into policy-governed physical action with verification and evidence.";
