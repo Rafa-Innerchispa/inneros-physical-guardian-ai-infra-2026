@@ -466,6 +466,10 @@ els.runtimeSelect.addEventListener("change", () => {
   els.runtimeBadge.textContent = text;
 });
 
+document.addEventListener("guardian:voice-state", (event) => {
+  if (event.detail) renderState(event.detail);
+});
+
 document.addEventListener("keydown", (event) => {
   const tag = document.activeElement?.tagName?.toLowerCase();
   if (tag === "select" || tag === "input" || tag === "textarea") return;

@@ -13,11 +13,14 @@ from typing import Any
 from urllib.parse import urlparse
 
 from .engine import GuardianDemoEngine
+from .voice import GuardianVoiceRouter, speechmatics_status
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 APP_ROOT = REPO_ROOT / "app"
 ENGINE = GuardianDemoEngine()
+VOICE = GuardianVoiceRouter(ENGINE)
+VOICE_BRIDGE_TOKEN_ENV = "GUARDIAN_VOICE_BRIDGE_TOKEN"
 
 
 def _auth_config() -> tuple[str, str] | None | bool:
@@ -32,7 +35,7 @@ def _auth_config() -> tuple[str, str] | None | bool:
 
 
 class GuardianDemoHandler(BaseHTTPRequestHandler):
-    server_version = "GuardianDemo/0.2"
+    server_version = "GuardianDemo/0.3"
 
     def log_message(self, fmt: str, *args: object) -> None:
         # Keep local demo logs minimal and free of request bodies or credentials.
@@ -75,6 +78,14 @@ class GuardianDemoHandler(BaseHTTPRequestHandler):
         return hmac.compare_digest(supplied_user, expected_user) and hmac.compare_digest(
             supplied_password, expected_password
         )
+
+    def _voice_source_truth(self) -> str:
+        """Upgrade provenance only for a server-side authenticated live bridge."""
+        expected = os.environ.get(VOICE_BRIDGE_TOKEN_ENV, "")
+        supplied = self.headers.get("X-Guardian-Voice-Bridge", "")
+        if expected and supplied and hmac.compare_digest(expected, supplied):
+            return "SPEECHMATICS_LIVE_TRANSCRIPT"
+        return "CLIENT_REPORTED_TRANSCRIPT"
 
     def _guard(self, path: str) -> bool:
         # Health stays public for container/platform readiness probes.
@@ -138,7 +149,9 @@ class GuardianDemoHandler(BaseHTTPRequestHandler):
                     "service": "inneros-physical-guardian-ai-infra-2026",
                     "mode": "JUDGE_DEMO",
                     "build_window": "LIVE",
-                    "access_control": "enabled" if config not in (None, False) else ("misconfigured" if config is False else "local/default"),
+                    "access_control": "enabled"
+                    if config not in (None, False)
+                    else ("misconfigured" if config is False else "local/default"),
                 }
             )
             return
@@ -147,6 +160,13 @@ class GuardianDemoHandler(BaseHTTPRequestHandler):
             return
         if path == "/api/state":
             self._send_json(ENGINE.state())
+            return
+        if path == "/api/voice/status":
+            status = speechmatics_status()
+            status["live_bridge_token_configured"] = bool(
+                os.environ.get(VOICE_BRIDGE_TOKEN_ENV, "")
+            )
+            self._send_json(status)
             return
         if path == "/api/evidence/latest":
             if ENGINE.latest_evidence is None:
@@ -184,6 +204,12 @@ class GuardianDemoHandler(BaseHTTPRequestHandler):
                 result = ENGINE.resume()
             elif path == "/api/action/cancel":
                 result = ENGINE.cancel()
+            elif path == "/api/voice/intent":
+                result = VOICE.route(
+                    str(payload.get("transcript", "")),
+                    provider=str(payload.get("provider", "speechmatics")),
+                    source_truth=self._voice_source_truth(),
+                )
             else:
                 self._send_json({"error": "unknown API route"}, HTTPStatus.NOT_FOUND)
                 return
@@ -206,7 +232,9 @@ def main() -> None:
 
     config = _auth_config()
     if config is False:
-        raise SystemExit("GUARDIAN_DEMO_USER and GUARDIAN_DEMO_PASSWORD must either both be set or both be unset")
+        raise SystemExit(
+            "GUARDIAN_DEMO_USER and GUARDIAN_DEMO_PASSWORD must either both be set or both be unset"
+        )
 
     server = build_server(args.host, args.port)
     print(f"InnerOS Physical Guardian judge demo: http://{args.host}:{args.port}")
