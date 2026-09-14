@@ -199,3 +199,30 @@ Before Tuesday/on-site work begins, the repository should provide:
 - no regression or mutation of permanent `inneros-physical-guardian`.
 
 Update this file whenever a new canonical main SHA, sponsor assignment, hardware fact, runtime contract or critical safety invariant changes.
+
+
+## 11. September 14 SiMa + provider readiness delta
+
+Functional base for this readiness increment: hackathon `main` `55dbd0a7fcf5d934c43c02e4a330a49b34fa2259`. Development branch: `chatgpt/guardian-sima-onsite-kit-20260914`. Re-verify GitHub main after merge; never treat a temporary branch SHA as canonical product truth.
+
+### Speechmatics platform registration
+
+Speechmatics is no longer only an adapter buried in this hackathon repository:
+
+- provider manifest `speechmatics` is registered through Provider Onboarding;
+- auth mode is `owner_vault`; raw API key remains outside repositories and coordination;
+- provider preflight PASS;
+- project `inneros-physical-guardian-ai-infra-2026` is durably linked to provider `speechmatics` capability `realtime_stt` under task `ops_3eaabe14cdf0`;
+- the hackathon repository remains a consumer of that capability/SDK boundary, not the owner of the secret.
+
+### SiMa onsite tooling
+
+Pre-hardware tooling now includes:
+
+- `src/guardian_demo/sima_onsite.py` — read-only SiMa readiness helpers, validated DevKit IP planning and truth-gated evidence packaging;
+- `scripts/sima_onsite_preflight.py` — checks `sima-cli`, optional `device discover` and Model Zoo listing without login/install/update side effects;
+- `scripts/sima_capture_evidence.py` — packages sponsor benchmark evidence and refuses `MEASURED_SPONSOR_RUNTIME` unless hardware/runtime/model versions, sample count, positive p50/p95 latency and a hashed source benchmark JSON are present;
+- `docs/SIMA_ONSITE_CHECKLIST.md` — current official bring-up path: Developer Portal approval -> `sima-cli` -> device discovery/SSH -> Neat SDK/Model Zoo -> one genuine inference -> loopback `/infer` -> Guardian closed loop -> benchmark;
+- `scripts/windows_event_bootstrap.ps1` now runs the SiMa preflight as an optional lane without making sponsor hardware a dependency of the offline demo.
+
+Validation on the feature tree reached 47/47 pytest PASS, compileall PASS, diff hygiene PASS and `scripts/self_test.py` ALL ACCEPTANCE CHECKS PASSED before PR. Read-only SiMa preflight on `.4` truthfully reports `sima-cli` missing; this is expected before approved SiMa software/hardware access and does not block Guardian.
