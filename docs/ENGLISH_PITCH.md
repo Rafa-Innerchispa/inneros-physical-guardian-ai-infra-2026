@@ -1,76 +1,107 @@
 # English Pitch Practice — InnerOS Physical Guardian
 
-## 20-second version
+## 15-second version
 
-> InnerOS Physical Guardian turns existing security cameras and DVR/NVR systems into a local-first Physical AI network. Instead of replacing a building’s CCTV infrastructure, we add edge intelligence that can detect behavior, understand events over time, trigger governed actions and preserve forensic evidence.
+> Buildings already have cameras. InnerOS Physical Guardian turns that existing infrastructure into governed Physical AI. SiMa handles efficient edge perception, while Guardian decides what actions are allowed, verifies the physical result, and preserves evidence.
+
+## 30-second version
+
+> InnerOS Physical Guardian upgrades existing CCTV instead of forcing customers to replace it. We use SiMa edge inference to understand what is happening locally, then Guardian applies temporal rules and policy before any physical action. Actions are bounded, interruptible and independently verified, and every step is preserved as evidence. Speechmatics adds voice control, but voice cannot bypass approval or safety gates.
 
 ## 60-second version
 
-> We build security and automation systems in Ecuador, and one problem we see constantly is that buildings already have dozens of cameras, but most of those cameras are passive. Replacing everything with new AI cameras is expensive and often unnecessary. InnerOS Physical Guardian adds a Physical AI layer on top of the infrastructure customers already own. We connect to existing DVRs, NVRs and IP cameras using standard protocols, perform detection, tracking, zone and temporal behavior analysis, and then route meaningful events through governed actions and forensic evidence. Our architecture is local-first and can run on site, on shared edge compute, or in a hybrid model. For this hackathon we want to prove that the same real-world system can use the sponsor’s edge hardware for low-latency Physical AI without locking the customer into a cloud-only platform.
+> We build real security and automation systems in Ecuador, and we constantly see buildings with dozens of perfectly usable cameras that mostly record evidence after something has already happened. Replacing the whole estate with new AI cameras is expensive and creates more vendor lock-in. InnerOS Physical Guardian adds intelligence on top of the infrastructure customers already own. For the SiMa track, the Modalix edge platform becomes our perception engine: it detects what is happening locally and feeds normalized events into Guardian. Guardian then reasons over time, applies policy, proposes a bounded physical action, requires the right authorization, verifies the result through independent readback, and preserves a forensic evidence receipt. The action can also be interrupted, forced into a verified safe state, re-verified, and only then resumed. Speechmatics gives us a natural voice interface for explanation and interruption without allowing voice to bypass the safety model.
 
-## 3-minute structure
+## 90-second judge narrative
 
 ### 1. Problem
 
-> Buildings already have cameras, but they mostly record evidence after something happened.
+> Buildings already have eyes, but most of those eyes are passive. They record what happened instead of helping the building respond safely while it is happening.
 
-### 2. Constraint
+### 2. Retrofit constraint
 
-> Real customers cannot replace sixty-four cameras and two recorders just to adopt AI.
+> Real customers cannot replace sixty-four cameras and multiple recorders every time a better AI accelerator appears.
 
-### 3. Solution
+### 3. SiMa perception
 
-> Guardian connects to the infrastructure they already own and adds perception, temporal behavior analysis, governed actions and evidence.
+> We keep the camera infrastructure and move perception to SiMa at the edge. The inference adapter normalizes detections so Guardian is not locked to one accelerator.
 
-### 4. Real-world proof
+### 4. Guardian control plane
 
-> We already run the permanent product with real Dahua video infrastructure in Ecuador and are designing a low-cost deployment for existing buildings where the customer does not need a local GPU server.
+> Guardian adds the part an object detector does not provide: temporal context, policy, human authority, bounded action, interruption, safe state, readback verification and evidence.
 
-### 5. Hackathon contribution
+### 5. Live proof
 
-> During the hackathon we are adapting the perception path to the assigned edge platform, measuring latency and resource use, and connecting that result back into the vendor-neutral Guardian control plane.
+> A person remains in or enters a restricted zone. SiMa produces the edge inference. Guardian explains the reason codes and proposes a safe action. The action cannot execute until authorized. After execution, Guardian independently verifies the physical state.
 
-### 6. Why it matters
+### 6. Safety proof
 
-> This creates a migration path from passive CCTV to Physical AI without forcing customers to throw away working infrastructure.
+> We interrupt the action. Guardian enters a verified safe state. A premature resume is rejected. Only after re-verification can the action resume or be cancelled.
 
-## Technical Q&A phrases
+### 7. Voice bonus
 
-Use these instead of trying to improvise long sentences:
+> Speechmatics lets the operator ask why the incident triggered, interrupt, re-verify, resume or cancel. Voice never grants a new physical approval.
 
-- “The product core is vendor-neutral.”
-- “This adapter is specific to the hackathon hardware.”
-- “The video source stays compatible with standard RTSP and ONVIF infrastructure.”
+### 8. Evidence
+
+> The final receipt shows what the system saw, why it decided, who authorized it, what physically happened and how that result was verified.
+
+## Strong closer
+
+> SiMa gives the building perception. InnerOS Guardian gives that perception judgment, controlled action and accountability. The accelerator can change. The safety and evidence chain stays intact.
+
+## What we built for this hackathon
+
+Use this answer exactly when provenance matters:
+
+> The permanent Guardian product existed before the hackathon and is disclosed. For this event we built the sponsor-runtime adapter path, the SiMa onsite integration tooling, the interrupt/reverify/resume judge lifecycle, the evidence and benchmark gates, the judge console, and the bounded Speechmatics voice lane. We keep the hackathon delta separate from the permanent product repository.
+
+## Technical Q&A anchors
+
+- “The permanent product core is vendor-neutral.”
+- “SiMa is the assigned onsite edge inference path.”
+- “The sponsor adapter is loopback-only and normalizes detections.”
 - “We use temporary tracking IDs, not biometric identity.”
 - “The anomaly engine reasons over time, not only one frame.”
-- “The action path is bounded and auditable.”
-- “The evidence store preserves what the system saw and what it did.”
-- “We measure latency end to end instead of claiming real time without evidence.”
-- “The customer can choose local, hybrid, or shared central inference.”
-- “We are not replacing the recorder. We are adding intelligence on top of it.”
+- “A proposed action is not the same as an authorized action.”
+- “Resume is impossible until safe state has been re-verified.”
+- “Voice cannot approve a new physical action.”
+- “Independent readback is what lets us say the action actually happened.”
+- “We measure before we claim.”
+- “The customer can keep the cameras and replace the inference hardware independently.”
 
-## Questions a judge is likely to ask
+## Likely judge questions
 
 ### Why not just buy AI cameras?
 
-> Because many customers already have large CCTV estates. Replacing all of the cameras is expensive, creates vendor lock-in and is often unnecessary. Guardian lets them upgrade intelligence independently from the camera lifecycle.
+> Because the camera lifecycle and the AI-compute lifecycle should not be the same thing. Many buildings already have large CCTV estates. Guardian lets them upgrade intelligence without replacing working cameras or locking the whole system to one camera vendor.
 
-### Is the video sent to the cloud?
+### What exactly does SiMa do here?
 
-> Not necessarily. Guardian is local-first. The deployment can be fully local, hybrid, or use shared central compute depending on customer constraints.
+> SiMa provides the edge perception runtime for the onsite demo. It produces the real local inference that Guardian converts into normalized detections and then into temporal reasoning, policy and governed action.
 
-### What did you build during the hackathon?
+### What exactly does Guardian add beyond YOLO or another detector?
 
-> The permanent Guardian product is pre-existing and disclosed. During the hackathon we build the sponsor-specific integration, optimization, benchmark and judge-facing demo layer.
-
-### How is this different from motion detection?
-
-> Motion is only one signal. Guardian tracks objects over time, understands zones and temporal sequences, and can distinguish patterns such as repeated attempts, loitering or restricted-area behavior before escalating.
+> Detection answers “what is in this frame.” Guardian answers “what has been happening over time, what policy applies, what action is allowed, did it physically happen, and can we prove it.”
 
 ### What happens if the AI is wrong?
 
-> An alert is a review candidate, not an accusation. Actions are governed by policy, and the evidence behind the event is preserved for operator review and forensic replay.
+> A detection is evidence for a decision, not an accusation. The system uses policy, bounded actions and human authority. High-impact actions are denied or require explicit authorization, and the evidence behind the event remains available for review.
 
-## Pronunciation / pacing rule
+### What if somebody says “open the door” by voice?
 
-Speak slower than feels natural. Short sentences are better than complicated grammar. A technical answer that is clear in ten words is stronger than a perfect forty-word sentence delivered under stress.
+> The voice layer rejects that. Speechmatics can explain, interrupt, re-verify, resume or cancel within the existing governed lifecycle, but voice cannot create a new approval or bypass physical policy.
+
+### Is the demo actually using SiMa or is SiMa just on the architecture diagram?
+
+If the strict live gate passes:
+
+> The SiMa sidecar is providing the measured inference for this trace. You can see the runtime truth label and the captured evidence source.
+
+If the strict live gate has not passed:
+
+> The Guardian composition is live, but this run is explicitly labeled as a fixture or unverified sponsor runtime. We do not call sponsor inference live until the measured gate passes.
+
+## Pronunciation / pacing
+
+Speak slower than feels natural. Short sentences beat elaborate grammar. When a judge asks a technical question, answer the question first, then add one proof point. Do not turn a twenty-second Q&A slot into a conference keynote because adrenaline has opinions.

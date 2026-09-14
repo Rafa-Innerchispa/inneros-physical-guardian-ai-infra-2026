@@ -4,6 +4,8 @@
 
 > **Continuity first:** a new chat/agent must read `docs/PROJECT_CONTINUITY.md` before changing code. It records the permanent-product vs hackathon boundary, canonical SHAs, sponsor strategy, on-site sequence and safety invariants.
 
+> **Event freeze:** the team is officially confirmed for the **SiMa.ai onsite track**. Read `docs/EVENT_FREEZE_2026-09-14.md` before making any pre-judge change. Do not submit this project through the LabLab online Intel flow.
+
 Speechmatics is an optional bonus lane. Guardian remains fully usable without Speechmatics, sponsor hardware or an external network.
 
 InnerOS Physical Guardian turns existing cameras and building sensors into governed Physical AI without forcing customers to replace their security infrastructure.
@@ -19,6 +21,20 @@ python3 scripts/run_demo.py
 ```
 
 Open `http://127.0.0.1:8787`.
+
+Before presenting, exercise the exact governed lifecycle with:
+
+```bash
+python3 scripts/judge_rehearsal.py
+```
+
+When real SiMa inference and Physical I/O readback are connected, the strict truth gate is:
+
+```bash
+python3 scripts/judge_rehearsal.py --runtime sima-slot --require-measured-sponsor --require-live-physical
+```
+
+The complete demo must not be described as live if that strict gate fails.
 
 The single-screen WebUI includes:
 
@@ -71,7 +87,7 @@ The judge app has one offline-safe deterministic runtime plus local-only sponsor
 | Runtime | Default state | On-site binding |
 | --- | --- | --- |
 | InnerOS deterministic fixture | Ready | none |
-| SiMa.ai | Awaiting hardware/SDK | `GUARDIAN_SIMA_RUNTIME_URL` |
+| SiMa.ai | Track confirmed; awaiting onsite DevKit/SDK binding | `GUARDIAN_SIMA_RUNTIME_URL` |
 | Qualcomm | Awaiting hardware/SDK | `GUARDIAN_QUALCOMM_RUNTIME_URL` |
 | Intel | Awaiting hardware/SDK | `GUARDIAN_INTEL_RUNTIME_URL` |
 
@@ -116,7 +132,7 @@ The system will fail closed rather than fabricate sponsor or physical-output suc
 
 Judge actions are low-impact and allowlisted: beacon warning, operator notification and reference attention light. Door unlock, alarm disable, arbitrary shell execution and gate opening are explicitly denied in the demo policy.
 
-Human approval is required before the demo ACT stage can complete.
+Human approval is required before the demo ACT stage can complete. After an interruption, resume is denied until the safe state has been explicitly re-verified.
 
 ## Hosted judge mode
 
@@ -135,13 +151,19 @@ Deployment details: `DEPLOYMENT.md` and `docs/HOSTED_JUDGE_DEPLOY.md`.
 ## Current hackathon build artifacts
 
 - `app/` — single-screen judge WebUI;
-- `src/guardian_demo/` — demo engine, sponsor runtime boundary, Physical I/O bridge and HTTP server;
+- `src/guardian_demo/` — demo engine, sponsor runtime boundary, Physical I/O bridge, voice lane and HTTP server;
 - `scripts/run_demo.py` — one-command application start;
+- `scripts/judge_rehearsal.py` — lifecycle rehearsal + strict live truth gate;
+- `scripts/event_preflight.py` — event readiness without exposing secrets;
+- `scripts/sima_onsite_preflight.py` — SiMa host/device readiness;
+- `scripts/sima_capture_evidence.py` — sponsor evidence/benchmark capture with truth gating;
+- `scripts/speechmatics_voice_live.py` — official Speechmatics live microphone bridge;
 - `scripts/self_test.py` — zero-dependency acceptance test;
 - `scripts/mock_sponsor_sidecar.py` — contract-only sponsor sidecar harness;
-- `tests/` — safety/runtime/server/Physical-I/O/E2E developer checks;
-- `docs/LIVE_BUILD_STATUS.md` — exact build-window status and truth boundary;
-- `docs/JUDGE_DEMO_RUNBOOK.md` — 90-second judge presentation flow;
+- `tests/` — safety/runtime/server/Physical-I/O/voice/onsite developer checks;
+- `docs/PROJECT_CONTINUITY.md` — canonical handoff for future chats/agents;
+- `docs/EVENT_FREEZE_2026-09-14.md` — final scope freeze, SiMa bring-up order and judge truth gates;
+- `docs/JUDGE_DEMO_RUNBOOK.md` — current 90-second SiMa + Speechmatics judge flow;
 - `docs/SPONSOR_RUNTIME_BRIDGE.md` — on-site SDK integration contract;
 - `docs/PHYSICAL_IO_BRIDGE.md` — permanent-product action/readback integration;
 - `PREEXISTING_DISCLOSURE.md` and `BASELINE_PROVENANCE.json` — frozen provenance boundary.

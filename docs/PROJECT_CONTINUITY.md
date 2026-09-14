@@ -296,3 +296,15 @@ Onsite sequence remains:
 6. Run Guardian perception -> temporal reasoning -> bounded action -> readback -> interrupt -> safe state -> reverify -> resume/cancel -> Evidence Receipt.
 7. Capture source benchmark artifact and only then allow `MEASURED_SPONSOR_RUNTIME` truth label.
 8. Exercise Speechmatics bounded voice intents without bypassing approval/reverification gates.
+
+
+## Final pre-event hardening — 2026-09-14
+
+- LabLab officially confirmed **InnerOS Physical Guardian for the SiMa.ai onsite track**, matching first choice.
+- Do **not** submit this project through the LabLab online flow; LabLab stated that the online challenge is Intel-only and a project can only occupy one track.
+- `docs/EVENT_FREEZE_2026-09-14.md` is the final scope-freeze/runbook for check-in, Modalix identity, Palette Neat bring-up, Model Zoo-first integration, strict truth gates and fallback order.
+- `scripts/judge_rehearsal.py` exercises the exact governed lifecycle: proposal → human approval → verified execution → interrupt → verified safe state → resume denied before re-verification → reverify → resumed verification → sealed evidence.
+- Offline rehearsal is intentionally allowed to use fixtures. The onsite strict gate must be run with `--runtime sima-slot --require-measured-sponsor --require-live-physical` before claiming the complete loop is live.
+- `docs/JUDGE_DEMO_RUNBOOK.md` and `docs/ENGLISH_PITCH.md` now reflect the confirmed SiMa path, Speechmatics bonus lane and interrupt/reverify/resume safety story.
+- After the final hardening merge, the core is frozen. Only real onsite blockers may change code: SiMa SDK/sidecar binding, Physical I/O/readback, event-laptop audio/driver issues, evidence capture, or P0 fixes.
+- Permanent product `Rafa-Innerchispa/inneros-physical-guardian` remains outside the hackathon development surface.
