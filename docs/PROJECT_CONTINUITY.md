@@ -30,7 +30,7 @@ This is the reusable InnerOS product. It owns reusable camera ingestion, RTSP/ON
 
 Repository: `Rafa-Innerchispa/inneros-physical-guardian-ai-infra-2026`  
 Baseline immediately before Speechmatics readiness: `37b5a722fd838637cf2f27916364fec685146329`  
-Canonical main after event-preflight PR #12: `288047eca85c2f17f11f3a2aa914eeb355de440b`
+Canonical main after Windows event-laptop PR #13: `f9be26cde421711e954d94a1d843c12194513321`
 
 This repository owns only the competition delta: Judge UI, sponsor runtime adapters, on-site integration, benchmark collection, demo orchestration, Speechmatics bonus integration, deployment, evidence presentation, pitch and pre-existing-work disclosure.
 
@@ -70,15 +70,17 @@ Existing internal resource truth as of September 14, 2026:
 - use the official Speechmatics API/SDK and server-side secret binding;
 - never copy the raw API key into Git, coordination, logs, screenshots or chat.
 
-Runtime readiness after PR #12:
+Runtime readiness after PR #13:
 
-- primary `.4` hackathon runtime is synchronized exactly to `288047eca85c2f17f11f3a2aa914eeb355de440b`;
+- primary `.4` hackathon runtime is synchronized exactly to `f9be26cde421711e954d94a1d843c12194513321`;
 - isolated project `.venv` exists on `.4`;
 - official `speechmatics-rt==1.1.1` is installed successfully in that venv;
 - `scripts/self_test.py` passes from the merged runtime;
 - `scripts/event_preflight.py` is the canonical event readiness gate and separates required Guardian core checks from optional Speechmatics, microphone, SiMa and Physical I/O lanes;
-- event-preflight feature validation reached 36/36 pytest PASS and GitHub CI PASS before merge;
-- runtime event preflight on `.4` reports Guardian core PASS and `speechmatics-rt 1.1.1` PASS;
+- event-preflight feature validation reached 36/36 pytest PASS and PR #12 GitHub CI PASS;
+- Windows event-laptop feature validation reached 40/40 pytest PASS, compileall PASS, diff check PASS and PR #13 GitHub CI PASS;
+- runtime event preflight on `.4` at `f9be26c...` reports Guardian core PASS and `speechmatics-rt 1.1.1` PASS;
+- merged runtime `scripts/self_test.py` at `f9be26c...` reports ALL ACCEPTANCE CHECKS PASSED;
 - optional PyAudio microphone install on `.4` is blocked because `portaudio.h` is absent and `portaudio19-dev` is not on the bounded peer-package allowlist;
 - this PortAudio limitation is **not a blocker for the event architecture** because `.4` is not the required on-site microphone host. The live mic bridge is intended to run on the event laptop, where the audio dependency can be installed against the actual OS/audio device;
 - the raw Speechmatics key remains vault-only. Current ChatGPT tool surface does not expose a generic secret binder for injecting its value into this project runtime, so do not work around that by copying the secret.
