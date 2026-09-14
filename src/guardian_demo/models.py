@@ -48,6 +48,10 @@ class DemoTrace:
     evidence_id: str | None = None
     metrics: dict[str, Any] = field(default_factory=dict)
     truth: dict[str, str] = field(default_factory=dict)
+    lifecycle_events: list[dict[str, Any]] = field(default_factory=list)
+    safe_state_verified: bool = False
+    reverified: bool = False
+    resume_count: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

@@ -5,10 +5,18 @@ const els = {
   runtimeSelect: $("runtimeSelect"),
   runtimeBadge: $("runtimeBadge"),
   ioBadge: $("ioBadge"),
+  truthBadge: $("truthBadge"),
   runBtn: $("runBtn"),
   resetBtn: $("resetBtn"),
   approveBtn: $("approveBtn"),
   rejectBtn: $("rejectBtn"),
+  interruptBtn: $("interruptBtn"),
+  reverifyBtn: $("reverifyBtn"),
+  resumeBtn: $("resumeBtn"),
+  cancelBtn: $("cancelBtn"),
+  lifecyclePanel: $("lifecyclePanel"),
+  lifecycleState: $("lifecycleState"),
+  lifecycleTimeline: $("lifecycleTimeline"),
   copyEvidenceBtn: $("copyEvidenceBtn"),
   cameraState: $("cameraState"),
   cameraClock: $("cameraClock"),
@@ -97,6 +105,26 @@ function humanizeZone(zone) {
 
 function formatMs(value) {
   return typeof value === "number" ? `${value.toFixed(Math.min(value < 1 ? 3 : 2, 3))} ms` : "—";
+}
+
+function renderTruthBadge(trace = null) {
+  const inference = trace?.truth?.detections;
+  const physical = trace?.truth?.physical_io;
+
+  if (
+    inference === "MEASURED_SPONSOR_RUNTIME"
+    && (physical === "REAL_LOW_VOLTAGE_HARDWARE" || physical === "PRODUCT_HTTP_READBACK")
+  ) {
+    els.truthBadge.textContent = "LIVE REAL";
+    return;
+  }
+  if (inference === "MEASURED_SPONSOR_RUNTIME") {
+    els.truthBadge.textContent = "LIVE SPONSOR INFERENCE";
+  } else if (inference === "SIMULATED_SPONSOR_SDK") {
+    els.truthBadge.textContent = "SIMULATED SPONSOR SDK";
+  } else {
+    els.truthBadge.textContent = "SYNTHETIC FIXTURE";
+  }
 }
 
 function renderIoBadge(trace = null) {
@@ -210,10 +238,47 @@ function renderEvidence(evidence) {
   els.evidenceMetric.textContent = evidence.evidence_id ? evidence.evidence_id.slice(0, 10) + "…" : "Draft";
 }
 
+function renderLifecycle(trace) {
+  if (!trace) {
+    els.lifecyclePanel.classList.add("hidden");
+    els.lifecycleTimeline.innerHTML = "";
+    return;
+  }
+
+  els.lifecyclePanel.classList.remove("hidden");
+  els.lifecycleState.textContent = String(trace.status || "UNKNOWN").replaceAll("_", " ");
+
+  const canInterrupt = trace.status === "VERIFIED" || trace.status === "RESUMED_VERIFIED";
+  const canReverify = trace.status === "SAFE_STATE_VERIFIED";
+  const canResume = trace.status === "REVERIFIED";
+  const canCancel = trace.status === "SAFE_STATE_VERIFIED" || trace.status === "REVERIFIED";
+  els.interruptBtn.classList.toggle("hidden", !canInterrupt);
+  els.reverifyBtn.classList.toggle("hidden", !canReverify);
+  els.resumeBtn.classList.toggle("hidden", !canResume);
+  els.cancelBtn.classList.toggle("hidden", !canCancel);
+
+  const events = trace.lifecycle_events || [];
+  els.lifecycleTimeline.innerHTML = "";
+  for (const event of events.slice(-7)) {
+    const row = document.createElement("div");
+    row.className = "lifecycle-event";
+    const state = document.createElement("strong");
+    state.textContent = String(event.state || "STATE").replaceAll("_", " ");
+    const summary = document.createElement("span");
+    summary.textContent = event.summary || "";
+    const truth = document.createElement("small");
+    truth.textContent = event.truth || "";
+    row.append(state, summary, truth);
+    els.lifecycleTimeline.appendChild(row);
+  }
+}
+
 function renderState(state) {
   latestState = state;
   const trace = state.current;
   renderEvidence(state.latest_evidence);
+  renderLifecycle(trace);
+  renderTruthBadge(trace);
 
   if (!trace) {
     renderIoBadge();
@@ -241,8 +306,14 @@ function renderState(state) {
   }
 
   renderIoBadge(trace);
-  if (trace.status === "VERIFIED") {
+  if (trace.status === "VERIFIED" || trace.status === "RESUMED_VERIFIED") {
     els.cameraState.textContent = "Verified event";
+  } else if (trace.status === "SAFE_STATE_VERIFIED") {
+    els.cameraState.textContent = "Interrupted · safe state";
+  } else if (trace.status === "REVERIFIED") {
+    els.cameraState.textContent = "Safe state re-verified";
+  } else if (trace.status === "CANCELLED_SAFE") {
+    els.cameraState.textContent = "Cancelled safely";
   } else if (trace.status === "REJECTED_SAFE") {
     els.cameraState.textContent = "Safe no-op";
   } else if (trace.status === "ACTION_FAILED_SAFE") {
@@ -385,6 +456,10 @@ els.runBtn.addEventListener("click", runScenario);
 els.resetBtn.addEventListener("click", resetDemo);
 els.approveBtn.addEventListener("click", () => decide("/api/action/approve", "Action verified. Evidence sealed."));
 els.rejectBtn.addEventListener("click", () => decide("/api/action/reject", "Action rejected. Safe no-op recorded."));
+els.interruptBtn.addEventListener("click", () => decide("/api/action/interrupt", "Interrupt verified. Safe state active."));
+els.reverifyBtn.addEventListener("click", () => decide("/api/action/reverify", "Safe state re-verified. Resume unlocked."));
+els.resumeBtn.addEventListener("click", () => decide("/api/action/resume", "Action resumed only after re-verification."));
+els.cancelBtn.addEventListener("click", () => decide("/api/action/cancel", "Interrupted action cancelled safely."));
 els.copyEvidenceBtn.addEventListener("click", copyEvidence);
 els.runtimeSelect.addEventListener("change", () => {
   const text = els.runtimeSelect.options[els.runtimeSelect.selectedIndex]?.textContent || "runtime";

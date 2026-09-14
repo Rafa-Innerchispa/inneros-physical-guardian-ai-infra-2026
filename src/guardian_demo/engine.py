@@ -49,11 +49,12 @@ DENIED_ACTIONS = {"unlock_door", "disable_alarm", "arbitrary_shell", "open_gate"
 
 
 class GuardianDemoEngine:
-    """Hackathon composition engine.
+    """Hackathon composition engine with an auditable interruptible action lifecycle.
 
     The permanent Guardian product owns camera, perception, tracking, temporal,
-    policy and physical-I/O contracts. This class only composes a bounded judge
-    demonstration and labels simulated vs measured evidence explicitly.
+    policy and physical-I/O contracts. This class composes a bounded judge demo,
+    labels simulated vs measured evidence explicitly, and adds event-specific
+    human governance around interruption, safe state, re-verification and resume.
     """
 
     def __init__(self) -> None:
@@ -63,6 +64,18 @@ class GuardianDemoEngine:
     @staticmethod
     def _now() -> str:
         return datetime.now(timezone.utc).isoformat()
+
+    def _record_lifecycle(self, state: str, summary: str, truth: str) -> None:
+        if not self.current:
+            raise RuntimeError("no active trace")
+        self.current.lifecycle_events.append(
+            {
+                "state": state,
+                "at": self._now(),
+                "summary": summary,
+                "truth": truth,
+            }
+        )
 
     def catalog(self) -> dict[str, Any]:
         return {
@@ -76,6 +89,8 @@ class GuardianDemoEngine:
                 "allowed_actions": sorted(ALLOWED_ACTIONS),
                 "denied_actions": sorted(DENIED_ACTIONS),
                 "approval_required": True,
+                "resume_requires_reverification": True,
+                "interrupt_enters_verified_safe_state": True,
             },
         }
 
@@ -186,6 +201,11 @@ class GuardianDemoEngine:
         trace.metrics["composition_to_proposal_ms"] = round((perf_counter() - started) * 1000.0, 3)
         trace.metrics["runtime_round_trip_ms"] = inference.runtime_overhead_ms
         self.current = trace
+        self._record_lifecycle(
+            "PROPOSED",
+            "Bounded action proposed; explicit human authorization is required",
+            "DETERMINISTIC_RULE",
+        )
         self.latest_evidence = self._make_evidence(final=False)
         return self.state()
 
@@ -198,6 +218,20 @@ class GuardianDemoEngine:
         action = self.current.proposed_action
         if action.action_type in DENIED_ACTIONS or action.action_type not in ALLOWED_ACTIONS:
             raise PermissionError(f"action denied by bounded demo policy: {action.action_type}")
+
+        self.current.decision = "APPROVED"
+        self.current.status = "AUTHORIZED"
+        self._record_lifecycle(
+            "AUTHORIZED",
+            "Human operator authorized the bounded action",
+            "HUMAN_APPROVAL",
+        )
+        self.current.status = "EXECUTING"
+        self._record_lifecycle(
+            "EXECUTING",
+            "Bounded Physical I/O execution started",
+            "MEASURED_COMPOSITION_OVERHEAD_ONLY",
+        )
 
         started = perf_counter()
         physical_io_result: dict[str, object] | None = None
@@ -214,7 +248,6 @@ class GuardianDemoEngine:
                 except RuntimeError as exc:
                     return self._fail_action_safe(str(exc), started=started)
 
-        self.current.decision = "APPROVED"
         physical_io_truth = (
             str(physical_io_result["truth"])
             if physical_io_result is not None
@@ -267,11 +300,270 @@ class GuardianDemoEngine:
                 )
 
         self.current.verified = True
+        self.current.safe_state_verified = False
+        self.current.reverified = False
         self.current.status = "VERIFIED"
         self.current.metrics["approval_to_verification_ms"] = round((perf_counter() - started) * 1000.0, 3)
+        self._record_lifecycle(
+            "EXECUTION_VERIFIED",
+            "Action execution completed with readback verification",
+            physical_io_truth,
+        )
         self.latest_evidence = self._make_evidence(final=True)
         self.current.evidence_id = self.latest_evidence["evidence_id"]
         return self.state()
+
+    def interrupt(self) -> dict[str, Any]:
+        if not self.current or not self.current.proposed_action:
+            raise RuntimeError("no active action to interrupt")
+        if self.current.status not in {"VERIFIED", "RESUMED_VERIFIED"}:
+            raise RuntimeError(f"trace cannot be interrupted from state: {self.current.status}")
+
+        action = self.current.proposed_action
+        started = perf_counter()
+        self._record_lifecycle(
+            "INTERRUPTED",
+            "Operator interrupt requested; Guardian must prove safe state before any resume",
+            "HUMAN_INTERRUPT",
+        )
+        self.current.status = "INTERRUPTING"
+        self.current.verified = False
+        self.current.reverified = False
+        self.current.safe_state_verified = False
+
+        io_status = PHYSICAL_IO.status()
+        safe_result: dict[str, object] | None = None
+        safe_truth = "DETERMINISTIC_SAFE_NOOP"
+        safe_cycle = f"safe-{self.current.resume_count}"
+
+        if PHYSICAL_IO.can_execute(action.action_type):
+            if io_status["status"] == "INVALID_LOCAL_BRIDGE_CONFIG":
+                return self._fail_interrupt_safe(
+                    "Physical I/O bridge configuration is invalid",
+                    started=started,
+                )
+            if io_status["status"] == "READY_CONFIGURED":
+                try:
+                    safe_result = PHYSICAL_IO.enter_safe_state(action, cycle=safe_cycle)
+                except RuntimeError as exc:
+                    return self._fail_interrupt_safe(str(exc), started=started)
+                safe_truth = str(safe_result["truth"])
+            else:
+                safe_truth = "SIMULATED_REFERENCE_IO"
+
+        self.current.safe_state_verified = True
+        self.current.truth["physical_io"] = safe_truth
+        self.current.status = "SAFE_STATE_VERIFIED"
+        self.current.metrics["interrupt_to_safe_state_ms"] = round(
+            (perf_counter() - started) * 1000.0, 3
+        )
+        if safe_result is not None:
+            self.current.metrics["safe_state_round_trip_ms"] = safe_result[
+                "total_round_trip_ms"
+            ]
+        self._record_lifecycle(
+            "SAFE_STATE_VERIFIED",
+            "Interrupt completed and safe state readback was verified; resume remains locked",
+            safe_truth,
+        )
+        self._set_interrupt_stage_state(
+            act_status="interrupted_safe",
+            act_summary="Execution interrupted; verified safe state applied",
+            verify_status="reverification_required",
+            verify_summary="Resume locked until safe state is re-verified",
+            truth=safe_truth,
+        )
+        self.latest_evidence = self._make_evidence(final=False)
+        self.current.evidence_id = self.latest_evidence["evidence_id"]
+        return self.state()
+
+    def reverify(self) -> dict[str, Any]:
+        if not self.current or not self.current.proposed_action:
+            raise RuntimeError("no interrupted action to re-verify")
+        if self.current.status != "SAFE_STATE_VERIFIED" or not self.current.safe_state_verified:
+            raise RuntimeError("resume precondition failed: verified safe state is required")
+
+        action = self.current.proposed_action
+        started = perf_counter()
+        io_status = PHYSICAL_IO.status()
+        reverify_result: dict[str, object] | None = None
+        reverify_truth = "DETERMINISTIC_SAFE_NOOP"
+        safe_cycle = f"safe-{self.current.resume_count}"
+
+        if PHYSICAL_IO.can_execute(action.action_type):
+            if io_status["status"] == "INVALID_LOCAL_BRIDGE_CONFIG":
+                return self._fail_reverification("Physical I/O bridge configuration is invalid")
+            if io_status["status"] == "READY_CONFIGURED":
+                try:
+                    reverify_result = PHYSICAL_IO.reverify_safe_state(action, cycle=safe_cycle)
+                except RuntimeError as exc:
+                    return self._fail_reverification(str(exc))
+                reverify_truth = str(reverify_result["truth"])
+            else:
+                reverify_truth = "SIMULATED_REFERENCE_IO"
+
+        self.current.reverified = True
+        self.current.status = "REVERIFIED"
+        self.current.truth["physical_io"] = reverify_truth
+        self.current.metrics["safe_state_reverification_ms"] = round(
+            (perf_counter() - started) * 1000.0, 3
+        )
+        self._record_lifecycle(
+            "REVERIFIED",
+            "Safe state was re-verified; explicit resume or cancel is now permitted",
+            reverify_truth,
+        )
+        for stage in self.current.stages:
+            if stage["stage"] == "VERIFY":
+                stage.update(
+                    status="complete",
+                    summary="Safe state re-verified; resume gate unlocked",
+                    truth=reverify_truth,
+                )
+            elif stage["stage"] == "PROVE":
+                stage.update(
+                    status="checkpoint",
+                    summary="Re-verification checkpoint appended to evidence timeline",
+                    truth="MEASURED_AND_LABELED",
+                )
+        self.latest_evidence = self._make_evidence(final=False)
+        self.current.evidence_id = self.latest_evidence["evidence_id"]
+        return self.state()
+
+    def resume(self) -> dict[str, Any]:
+        if not self.current or not self.current.proposed_action:
+            raise RuntimeError("no interrupted action to resume")
+        if self.current.status != "REVERIFIED" or not self.current.reverified:
+            raise RuntimeError("resume denied until safe state has been re-verified")
+
+        action = self.current.proposed_action
+        next_resume = self.current.resume_count + 1
+        self.current.status = "EXECUTING"
+        self._record_lifecycle(
+            "RESUMING",
+            "Operator requested resume after successful re-verification",
+            "HUMAN_COMMAND",
+        )
+        started = perf_counter()
+        io_status = PHYSICAL_IO.status()
+        physical_io_result: dict[str, object] | None = None
+        resume_truth = "SIMULATED_REFERENCE_IO"
+
+        if PHYSICAL_IO.can_execute(action.action_type):
+            if io_status["status"] == "INVALID_LOCAL_BRIDGE_CONFIG":
+                return self._fail_resume_safe("Physical I/O bridge configuration is invalid")
+            if io_status["status"] == "READY_CONFIGURED":
+                try:
+                    physical_io_result = PHYSICAL_IO.execute(
+                        action,
+                        cycle=f"resume-{next_resume}",
+                    )
+                except RuntimeError as exc:
+                    return self._fail_resume_safe(str(exc))
+                resume_truth = str(physical_io_result["truth"])
+
+        self.current.resume_count = next_resume
+        self.current.verified = True
+        self.current.safe_state_verified = False
+        self.current.reverified = False
+        self.current.status = "RESUMED_VERIFIED"
+        self.current.truth["physical_io"] = resume_truth
+        self.current.metrics["resume_to_verification_ms"] = round(
+            (perf_counter() - started) * 1000.0, 3
+        )
+        if physical_io_result is not None:
+            self.current.metrics["resume_physical_io_round_trip_ms"] = physical_io_result[
+                "total_round_trip_ms"
+            ]
+        self._record_lifecycle(
+            "RESUMED_VERIFIED",
+            "Action resumed only after re-verification and completed with readback verification",
+            resume_truth,
+        )
+        for stage in self.current.stages:
+            if stage["stage"] == "ACT":
+                stage.update(
+                    status="complete",
+                    summary=f"Bounded action resumed after re-verification (cycle {next_resume})",
+                    truth=resume_truth,
+                )
+            elif stage["stage"] == "VERIFY":
+                stage.update(
+                    status="complete",
+                    summary="Resumed action readback verified",
+                    truth=resume_truth,
+                )
+            elif stage["stage"] == "PROVE":
+                stage.update(
+                    status="complete",
+                    summary="Interrupt/reverify/resume lifecycle sealed in evidence bundle",
+                    truth="MEASURED_AND_LABELED",
+                )
+        self.latest_evidence = self._make_evidence(final=True)
+        self.current.evidence_id = self.latest_evidence["evidence_id"]
+        return self.state()
+
+    def cancel(self) -> dict[str, Any]:
+        if not self.current:
+            raise RuntimeError("no interrupted action to cancel")
+        if self.current.status not in {"SAFE_STATE_VERIFIED", "REVERIFIED"}:
+            raise RuntimeError(f"trace cannot be cancelled from state: {self.current.status}")
+        if not self.current.safe_state_verified:
+            raise RuntimeError("cancel requires a verified safe state")
+
+        self.current.decision = "CANCELLED"
+        self.current.status = "CANCELLED_SAFE"
+        self.current.verified = True
+        self._record_lifecycle(
+            "CANCELLED_SAFE",
+            "Operator cancelled the interrupted action while verified safe state remained active",
+            self.current.truth.get("physical_io", "DETERMINISTIC_SAFE_NOOP"),
+        )
+        for stage in self.current.stages:
+            if stage["stage"] == "ACT":
+                stage.update(
+                    status="cancelled_safe",
+                    summary="Interrupted action cancelled; safe state remains active",
+                    truth=self.current.truth.get("physical_io", "DETERMINISTIC_SAFE_NOOP"),
+                )
+            elif stage["stage"] == "VERIFY":
+                stage.update(
+                    status="complete",
+                    summary="Verified safe state preserved after cancellation",
+                    truth=self.current.truth.get("physical_io", "DETERMINISTIC_SAFE_NOOP"),
+                )
+            elif stage["stage"] == "PROVE":
+                stage.update(
+                    status="complete",
+                    summary="Cancellation and safe-state evidence sealed",
+                    truth="MEASURED_AND_LABELED",
+                )
+        self.latest_evidence = self._make_evidence(final=True)
+        self.current.evidence_id = self.latest_evidence["evidence_id"]
+        return self.state()
+
+    def _set_interrupt_stage_state(
+        self,
+        *,
+        act_status: str,
+        act_summary: str,
+        verify_status: str,
+        verify_summary: str,
+        truth: str,
+    ) -> None:
+        if not self.current:
+            raise RuntimeError("no active trace")
+        for stage in self.current.stages:
+            if stage["stage"] == "ACT":
+                stage.update(status=act_status, summary=act_summary, truth=truth)
+            elif stage["stage"] == "VERIFY":
+                stage.update(status=verify_status, summary=verify_summary, truth=truth)
+            elif stage["stage"] == "PROVE":
+                stage.update(
+                    status="checkpoint",
+                    summary="Interrupt checkpoint appended to forensic evidence",
+                    truth="MEASURED_AND_LABELED",
+                )
 
     def _fail_action_safe(self, reason: str, *, started: float) -> dict[str, Any]:
         if not self.current:
@@ -282,6 +574,11 @@ class GuardianDemoEngine:
         self.current.truth["physical_io"] = "FAILED_CLOSED"
         self.current.metrics["approval_to_failure_ms"] = round(
             (perf_counter() - started) * 1000.0, 3
+        )
+        self._record_lifecycle(
+            "EXECUTION_FAILED_SAFE",
+            "Physical action failed closed; no verified output was accepted",
+            "FAILED_CLOSED",
         )
         for stage in self.current.stages:
             if stage["stage"] == "ACT":
@@ -307,6 +604,92 @@ class GuardianDemoEngine:
         self.current.evidence_id = self.latest_evidence["evidence_id"]
         return self.state()
 
+    def _fail_interrupt_safe(self, reason: str, *, started: float) -> dict[str, Any]:
+        if not self.current:
+            raise RuntimeError("no active trace")
+        self.current.verified = False
+        self.current.safe_state_verified = False
+        self.current.reverified = False
+        self.current.status = "INTERRUPTION_UNVERIFIED"
+        self.current.truth["physical_io"] = "FAILED_CLOSED"
+        self.current.metrics["interrupt_to_failure_ms"] = round(
+            (perf_counter() - started) * 1000.0, 3
+        )
+        self._record_lifecycle(
+            "SAFE_STATE_UNVERIFIED",
+            "Interrupt was requested but safe-state readback could not be verified",
+            "FAILED_CLOSED",
+        )
+        self._set_interrupt_stage_state(
+            act_status="failed_safe",
+            act_summary="Interrupt issued but verified safe state was not proven",
+            verify_status="failed_closed",
+            verify_summary="Resume denied because safe state is unverified",
+            truth="FAILED_CLOSED",
+        )
+        self.latest_evidence = self._make_evidence(final=True)
+        self.latest_evidence["physical_io_failure"] = reason
+        self.current.evidence_id = self.latest_evidence["evidence_id"]
+        return self.state()
+
+    def _fail_reverification(self, reason: str) -> dict[str, Any]:
+        if not self.current:
+            raise RuntimeError("no active trace")
+        self.current.reverified = False
+        self.current.status = "REVERIFICATION_FAILED"
+        self.current.truth["physical_io"] = "FAILED_CLOSED"
+        self._record_lifecycle(
+            "REVERIFICATION_FAILED",
+            "Safe-state re-verification failed; resume remains denied",
+            "FAILED_CLOSED",
+        )
+        for stage in self.current.stages:
+            if stage["stage"] == "VERIFY":
+                stage.update(
+                    status="failed_closed",
+                    summary="Safe state could not be re-verified; resume remains locked",
+                    truth="FAILED_CLOSED",
+                )
+        self.latest_evidence = self._make_evidence(final=True)
+        self.latest_evidence["physical_io_failure"] = reason
+        self.current.evidence_id = self.latest_evidence["evidence_id"]
+        return self.state()
+
+    def _fail_resume_safe(self, reason: str) -> dict[str, Any]:
+        if not self.current:
+            raise RuntimeError("no active trace")
+        self.current.verified = False
+        self.current.status = "RESUME_FAILED_SAFE"
+        self.current.truth["physical_io"] = "FAILED_CLOSED"
+        self._record_lifecycle(
+            "RESUME_FAILED_SAFE",
+            "Resume execution failed closed after re-verification",
+            "FAILED_CLOSED",
+        )
+        for stage in self.current.stages:
+            if stage["stage"] == "ACT":
+                stage.update(
+                    status="failed_safe",
+                    summary="Resume action failed; no verified resumed output accepted",
+                    truth="FAILED_CLOSED",
+                )
+            elif stage["stage"] == "VERIFY":
+                stage.update(
+                    status="failed_closed",
+                    summary="Resumed physical output could not be verified",
+                    truth="FAILED_CLOSED",
+                )
+            elif stage["stage"] == "PROVE":
+                stage.update(
+                    status="complete",
+                    summary="Failed resume sealed in forensic evidence",
+                    truth="MEASURED_AND_LABELED",
+                )
+        self.latest_evidence = self._make_evidence(final=True)
+        self.latest_evidence["physical_io_failure"] = reason
+        self.current.evidence_id = self.latest_evidence["evidence_id"]
+        return self.state()
+
     def reject(self) -> dict[str, Any]:
         if not self.current:
             raise RuntimeError("no active trace")
@@ -315,6 +698,11 @@ class GuardianDemoEngine:
 
         self.current.decision = "REJECTED"
         self.current.status = "REJECTED_SAFE"
+        self._record_lifecycle(
+            "REJECTED_SAFE",
+            "Operator rejected the proposed action; no physical output was issued",
+            "HUMAN_REJECTION",
+        )
         for stage in self.current.stages:
             if stage["stage"] == "ACT":
                 stage.update(
@@ -342,13 +730,17 @@ class GuardianDemoEngine:
         if not self.current:
             raise RuntimeError("no trace available")
         body = {
-            "schema": "inneros.guardian.hackathon.evidence.v1",
+            "schema": "inneros.guardian.hackathon.evidence.v2",
             "trace_id": self.current.trace_id,
             "scenario": self.current.scenario,
             "runtime_id": self.current.runtime_id,
             "status": self.current.status,
             "decision": self.current.decision,
             "verified": self.current.verified,
+            "safe_state_verified": self.current.safe_state_verified,
+            "reverified": self.current.reverified,
+            "resume_count": self.current.resume_count,
+            "lifecycle_events": self.current.lifecycle_events,
             "stages": self.current.stages,
             "metrics": self.current.metrics,
             "truth": self.current.truth,

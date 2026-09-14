@@ -31,6 +31,12 @@ class PhysicalIOBridge:
     optional so the judge application remains fully usable offline. When it is
     configured, mapped physical actions fail closed on any transport, identity,
     or readback verification error.
+
+    Interrupt/resume support is intentionally expressed through the same
+    permanent-product contract. A safe-state transition issues an explicit
+    low-voltage ``state=off`` action and verifies readback before the judge demo
+    may claim the system is safe. Resume uses a new idempotency identity so a
+    cached first execution can never masquerade as a resumed physical action.
     """
 
     def _configured_url(self) -> str | None:
@@ -99,7 +105,29 @@ class PhysicalIOBridge:
             raise RuntimeError("Physical I/O response must be a JSON object")
         return raw, elapsed_ms
 
-    def execute(self, action: ProposedAction) -> dict[str, object]:
+    @staticmethod
+    def _identity(
+        action: ProposedAction,
+        *,
+        product_action: str,
+        product_target: str,
+        cycle: str,
+    ) -> dict[str, str]:
+        action_id = action.action_id if cycle == "initial" else f"{action.action_id}-{cycle}"
+        return {
+            "action_id": action_id,
+            "idempotency_key": f"guardian-{action_id}",
+            "action_type": product_action,
+            "target_id": product_target,
+        }
+
+    def _execute_contract(
+        self,
+        action: ProposedAction,
+        *,
+        cycle: str,
+        parameters_override: dict[str, object] | None = None,
+    ) -> dict[str, object]:
         base_url = self._configured_url()
         if not base_url:
             raise RuntimeError("Physical I/O bridge is not configured")
@@ -107,13 +135,14 @@ class PhysicalIOBridge:
         if mapped is None:
             raise RuntimeError(f"No permanent Physical I/O mapping exists for action: {action.action_type}")
 
-        product_action, product_target, parameters = mapped
-        identity = {
-            "action_id": action.action_id,
-            "idempotency_key": f"guardian-{action.action_id}",
-            "action_type": product_action,
-            "target_id": product_target,
-        }
+        product_action, product_target, default_parameters = mapped
+        parameters = dict(default_parameters if parameters_override is None else parameters_override)
+        identity = self._identity(
+            action,
+            product_action=product_action,
+            product_target=product_target,
+            cycle=cycle,
+        )
         action_payload: dict[str, object] = {**identity, "parameters": parameters}
 
         total_started = perf_counter()
@@ -140,6 +169,54 @@ class PhysicalIOBridge:
             "action_round_trip_ms": round(action_ms, 3),
             "verify_round_trip_ms": round(verify_ms, 3),
             "total_round_trip_ms": round((perf_counter() - total_started) * 1000.0, 3),
+            "cycle": cycle,
+        }
+
+    def execute(self, action: ProposedAction, *, cycle: str = "initial") -> dict[str, object]:
+        return self._execute_contract(action, cycle=cycle)
+
+    def enter_safe_state(self, action: ProposedAction, *, cycle: str) -> dict[str, object]:
+        """Command and verify an explicit low-voltage safe state for a mapped action."""
+
+        return self._execute_contract(
+            action,
+            cycle=cycle,
+            parameters_override={"state": "off"},
+        )
+
+    def reverify_safe_state(self, action: ProposedAction, *, cycle: str) -> dict[str, object]:
+        """Re-read the previously verified safe-state identity before resume."""
+
+        base_url = self._configured_url()
+        if not base_url:
+            raise RuntimeError("Physical I/O bridge is not configured")
+        mapped = ACTION_MAP.get(action.action_type)
+        if mapped is None:
+            raise RuntimeError(f"No permanent Physical I/O mapping exists for action: {action.action_type}")
+
+        product_action, product_target, _ = mapped
+        identity = self._identity(
+            action,
+            product_action=product_action,
+            product_target=product_target,
+            cycle=cycle,
+        )
+        verified, verify_ms = self._post_json(base_url + "/v1/verify", identity)
+        self._validate_identity(verified, identity)
+        if verified.get("ok") is not True or verified.get("verified") is not True:
+            raise RuntimeError("Physical I/O safe-state re-verification failed")
+
+        truth = str(verified.get("truth") or "PRODUCT_HTTP_READBACK")
+        if truth not in ALLOWED_TRUTH:
+            truth = "PRODUCT_HTTP_READBACK"
+        return {
+            "ok": True,
+            "verified": True,
+            "truth": truth,
+            "contract_action": product_action,
+            "contract_target": product_target,
+            "verify_round_trip_ms": round(verify_ms, 3),
+            "cycle": cycle,
         }
 
 

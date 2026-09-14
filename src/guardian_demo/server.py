@@ -176,6 +176,14 @@ class GuardianDemoHandler(BaseHTTPRequestHandler):
                 result = ENGINE.approve()
             elif path == "/api/action/reject":
                 result = ENGINE.reject()
+            elif path == "/api/action/interrupt":
+                result = ENGINE.interrupt()
+            elif path == "/api/action/reverify":
+                result = ENGINE.reverify()
+            elif path == "/api/action/resume":
+                result = ENGINE.resume()
+            elif path == "/api/action/cancel":
+                result = ENGINE.cancel()
             else:
                 self._send_json({"error": "unknown API route"}, HTTPStatus.NOT_FOUND)
                 return
