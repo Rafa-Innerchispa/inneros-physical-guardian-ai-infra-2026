@@ -2,6 +2,10 @@
 
 **Live hackathon build. Functional judge demo.**
 
+> **Continuity first:** a new chat/agent must read `docs/PROJECT_CONTINUITY.md` before changing code. It records the permanent-product vs hackathon boundary, canonical SHAs, sponsor strategy, on-site sequence and safety invariants.
+
+Speechmatics is an optional bonus lane. Guardian remains fully usable without Speechmatics, sponsor hardware or an external network.
+
 InnerOS Physical Guardian turns existing cameras and building sensors into governed Physical AI without forcing customers to replace their security infrastructure.
 
 > **SEE → UNDERSTAND OVER TIME → DECIDE UNDER POLICY → ACT → VERIFY → PROVE**

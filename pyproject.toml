@@ -4,6 +4,10 @@ version = "0.1.0"
 description = "Hackathon composition layer for the InnerOS Physical Guardian AI Infra Summit 2026 demo"
 requires-python = ">=3.11"
 
+[project.optional-dependencies]
+speechmatics = ["speechmatics-rt==1.1.1"]
+speechmatics-live = ["speechmatics-rt==1.1.1", "pyaudio>=0.2.14"]
+
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
