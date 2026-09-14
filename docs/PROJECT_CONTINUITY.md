@@ -30,7 +30,7 @@ This is the reusable InnerOS product. It owns reusable camera ingestion, RTSP/ON
 
 Repository: `Rafa-Innerchispa/inneros-physical-guardian-ai-infra-2026`  
 Baseline immediately before Speechmatics readiness: `37b5a722fd838637cf2f27916364fec685146329`  
-Canonical main after PR #10 Speechmatics/continuity merge: `344855c61d82ee0dc1bbe80afac3beaec64a0525`
+Canonical main after event-preflight PR #12: `288047eca85c2f17f11f3a2aa914eeb355de440b`
 
 This repository owns only the competition delta: Judge UI, sponsor runtime adapters, on-site integration, benchmark collection, demo orchestration, Speechmatics bonus integration, deployment, evidence presentation, pitch and pre-existing-work disclosure.
 
@@ -56,6 +56,8 @@ Fallback sponsor targets: Qualcomm and Intel through the same normalized inferen
 
 Important track distinction: the **SO-101 robotic arm belongs to the on-site Intel Physical AI track**, not the SiMa track. Do not make the SiMa demo depend on that arm.
 
+Latest organizer evidence still says track allocation may be completed onsite and there should be no issue joining SiMa; no later formal assignment email has superseded that state.
+
 ## 4. Speechmatics bonus
 
 Speechmatics is a stackable bonus across tracks. It is an optional speech-to-text input adapter, never a required dependency of Guardian.
@@ -68,16 +70,18 @@ Existing internal resource truth as of September 14, 2026:
 - use the official Speechmatics API/SDK and server-side secret binding;
 - never copy the raw API key into Git, coordination, logs, screenshots or chat.
 
-Runtime readiness after PR #10:
+Runtime readiness after PR #12:
 
-- primary `.4` hackathon runtime is synchronized exactly to `344855c61d82ee0dc1bbe80afac3beaec64a0525`;
+- primary `.4` hackathon runtime is synchronized exactly to `288047eca85c2f17f11f3a2aa914eeb355de440b`;
 - isolated project `.venv` exists on `.4`;
 - official `speechmatics-rt==1.1.1` is installed successfully in that venv;
 - `scripts/self_test.py` passes from the merged runtime;
-- full pytest was already 31/31 PASS on the feature tree and GitHub CI passed; pytest itself is not installed in the runtime venv;
-- optional PyAudio microphone install on `.4` is currently blocked because `portaudio.h` is absent and `portaudio19-dev` is not on the bounded peer-package allowlist;
+- `scripts/event_preflight.py` is the canonical event readiness gate and separates required Guardian core checks from optional Speechmatics, microphone, SiMa and Physical I/O lanes;
+- event-preflight feature validation reached 36/36 pytest PASS and GitHub CI PASS before merge;
+- runtime event preflight on `.4` reports Guardian core PASS and `speechmatics-rt 1.1.1` PASS;
+- optional PyAudio microphone install on `.4` is blocked because `portaudio.h` is absent and `portaudio19-dev` is not on the bounded peer-package allowlist;
 - this PortAudio limitation is **not a blocker for the event architecture** because `.4` is not the required on-site microphone host. The live mic bridge is intended to run on the event laptop, where the audio dependency can be installed against the actual OS/audio device;
-- the raw Speechmatics key is still vault-only. Current ChatGPT tool surface does not expose a generic secret binder for injecting its value into this project runtime, so do not work around that by copying the secret.
+- the raw Speechmatics key remains vault-only. Current ChatGPT tool surface does not expose a generic secret binder for injecting its value into this project runtime, so do not work around that by copying the secret.
 
 Voice safety invariant:
 
@@ -137,6 +141,16 @@ Do not spend the first event hours rewriting Guardian. Use this order:
 
 Fallback if sponsor hardware is delayed: deterministic owned fixture + local Guardian + local safe actuator. Remote Ecuador CCTV is a bonus proof of retrofit capability, never an on-site dependency.
 
+### Windows event-laptop kit
+
+The on-site Windows path is documented in `docs/WINDOWS_EVENT_LAPTOP.md` and consists of:
+
+- `scripts/windows_event_bootstrap.ps1`: locate Python 3.11+, create isolated `.venv`, install the pinned Speechmatics/live-audio extras and run strict readiness checks;
+- `scripts/audio_devices.py`: inventory microphone/input devices without recording audio;
+- `scripts/windows_event_start.ps1`: launch Guardian, verify health, generate an ephemeral in-memory voice-bridge token and optionally start live Speechmatics after strict gates pass.
+
+These scripts must never prompt for, print, or persist the Speechmatics API key. Actual Windows microphone verification remains a physical event-laptop step.
+
 ## 8. Resume protocol for a new chat/agent
 
 Before writing code:
@@ -146,7 +160,8 @@ Before writing code:
 3. read the current coordination task `ops_3eaabe14cdf0` and latest project handoff/coordination messages;
 4. verify the permanent product repo is clean and untouched;
 5. verify the hackathon runtime/repo is clean;
-6. compare planned work against existing sponsor/voice adapters before creating anything new.
+6. compare planned work against existing sponsor/voice adapters before creating anything new;
+7. run `scripts/event_preflight.py` before adding features and treat optional physical/provider warnings as physical integration work, not justification to rewrite the core.
 
 Never infer that an agent failed to deliver from one inbox surface alone. Cross-check coordination messages, ops task state, GitHub branch/commit/PR and handoff documentation.
 
@@ -175,7 +190,8 @@ Before Tuesday/on-site work begins, the repository should provide:
 - SiMa on-site checklist and version capture ready;
 - Speechmatics bounded voice adapter PASS without external dependency;
 - official Speechmatics SDK installed in a project-specific environment where possible;
-- live microphone bridge ready to consume `SPEECHMATICS_API_KEY` from server-side environment;
+- live microphone bridge ready to consume `SPEECHMATICS_API_KEY` from a safe runtime environment;
+- Windows laptop bootstrap/start scripts ready and CI/static tested; actual microphone/device verification remains a physical laptop step;
 - clear LIVE REAL vs SYNTHETIC truth labels;
 - no raw secrets in Git;
 - no regression or mutation of permanent `inneros-physical-guardian`.
