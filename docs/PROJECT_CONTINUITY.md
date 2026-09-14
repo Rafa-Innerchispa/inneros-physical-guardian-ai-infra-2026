@@ -226,3 +226,25 @@ Pre-hardware tooling now includes:
 - `scripts/windows_event_bootstrap.ps1` now runs the SiMa preflight as an optional lane without making sponsor hardware a dependency of the offline demo.
 
 Validation on the feature tree reached 47/47 pytest PASS, compileall PASS, diff hygiene PASS and `scripts/self_test.py` ALL ACCEPTANCE CHECKS PASSED before PR. Read-only SiMa preflight on `.4` truthfully reports `sima-cli` missing; this is expected before approved SiMa software/hardware access and does not block Guardian.
+
+
+## 12. Post-merge canonical checkpoint — 2026-09-14
+
+Canonical hackathon `main` after PR #15 is `96bf5791a6eb2712c5369200adfd817eceb6c46a` (`Add SiMa onsite bring-up and evidence kit`). Primary `.4` runtime is synchronized exactly to that SHA and clean.
+
+Post-merge runtime verification at `96bf5791...`:
+
+- `scripts/event_preflight.py` => READY; Python/core/Git/Speechmatics SDK PASS;
+- `speechmatics-rt==1.1.1` remains installed in the project `.venv`;
+- `scripts/self_test.py` => ALL ACCEPTANCE CHECKS PASSED;
+- `scripts/sima_onsite_preflight.py` => expected WARN only because `sima-cli` is not installed/on PATH before approved SiMa software access; no hardware success is fabricated;
+- SiMa feature tree validation before merge: 47/47 pytest PASS, compileall PASS, diff hygiene PASS, GitHub CI SUCCESS;
+- permanent product repository remains untouched at `12e1720ddd439ba796daba3d31029d2151f6a544`.
+
+Speechmatics platform state at this checkpoint:
+
+- Provider Onboarding manifest `speechmatics` registered and preflight PASS;
+- project capability link exists: `inneros-physical-guardian-ai-infra-2026` -> `speechmatics/realtime_stt` under `ops_3eaabe14cdf0`;
+- Resource Fabric projection gap discovered: registered Speechmatics manifest/link is not yet displayed in the global providers projection; repair task `ops_029e98c0b3f5` was created and launched in `Rafa-Innerchispa/innerops-agentic-platform` on branch `chatgpt/resource-fabric-speechmatics-projection-20260914`.
+
+Remaining Guardian blockers are physical/environmental only: actual event-laptop microphone + safe Speechmatics secret binding, SiMa Modalix DevKit/approved `sima-cli`/Neat access onsite, and a verified real low-voltage/DMX Physical I/O sidecar. Do not reopen core architecture to compensate for missing physical hardware.
