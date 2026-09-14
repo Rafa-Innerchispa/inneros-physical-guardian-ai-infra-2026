@@ -248,3 +248,24 @@ Speechmatics platform state at this checkpoint:
 - Resource Fabric projection gap discovered: registered Speechmatics manifest/link is not yet displayed in the global providers projection; repair task `ops_029e98c0b3f5` was created and launched in `Rafa-Innerchispa/innerops-agentic-platform` on branch `chatgpt/resource-fabric-speechmatics-projection-20260914`.
 
 Remaining Guardian blockers are physical/environmental only: actual event-laptop microphone + safe Speechmatics secret binding, SiMa Modalix DevKit/approved `sima-cli`/Neat access onsite, and a verified real low-voltage/DMX Physical I/O sidecar. Do not reopen core architecture to compensate for missing physical hardware.
+
+
+## 13. Speechmatics Resource Fabric repair completed — 2026-09-14
+
+The platform repair previously recorded as pending is now **completed**.
+
+Canonical platform repository: `Rafa-Innerchispa/innerops-agentic-platform`.
+
+- PR #45 merged: registered Provider Onboarding manifests are projected into Resource Fabric without duplicating richer native providers; merge SHA `a7300a42fd77dbbb19568300b71ba3fcc53fc6bc`.
+- PR #46 merged: external-provider routing audit truth corrected; final platform main SHA `d2d8e66c9cce9df11a45f05f25a02422d8b09afb`.
+- platform repair task `ops_029e98c0b3f5` is completed with evidence.
+- live Resource Fabric contains both `speechmatics` and `assemblyai`.
+- Physical Guardian project capability link `realtime_stt -> speechmatics` is active and has priority over unlinked AssemblyAI for this project.
+- live routing acceptance selected `speechmatics` with `explicit_project_link=true`.
+- audit evidence now truthfully records `provider_kind=external_voice_provider`, `local_cloud=cloud`, and `reason_codes=[explicit_project_link]`.
+- live audit event `evt_26fc7498a34d8fc20d1968ed` was stored in Mongo, published to NATS JetStream, and exported through OpenTelemetry.
+- no raw Speechmatics secret was placed in Git, coordination, Resource Fabric documents, or logs.
+
+A live deployment drift was also corrected: the MCP runtime directory was missing tracked `audit_fabric.py` and had an older `durable_coordination_spine.py`. Both were aligned to tracked platform main content and the MCP restarted healthy before the final route acceptance.
+
+This means a new chat must **not** recreate a Speechmatics integration, manifest, or project link. Treat Speechmatics as an existing reusable InnerOS provider and use the Resource Fabric capability link already present. Remaining Physical Guardian work is still physical/event-specific: event-laptop microphone + secure key binding, SiMa Modalix/Neat live bring-up, and verified real low-voltage/DMX Physical I/O.
