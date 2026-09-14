@@ -248,3 +248,51 @@ Speechmatics platform state at this checkpoint:
 - Resource Fabric projection gap discovered: registered Speechmatics manifest/link is not yet displayed in the global providers projection; repair task `ops_029e98c0b3f5` was created and launched in `Rafa-Innerchispa/innerops-agentic-platform` on branch `chatgpt/resource-fabric-speechmatics-projection-20260914`.
 
 Remaining Guardian blockers are physical/environmental only: actual event-laptop microphone + safe Speechmatics secret binding, SiMa Modalix DevKit/approved `sima-cli`/Neat access onsite, and a verified real low-voltage/DMX Physical I/O sidecar. Do not reopen core architecture to compensate for missing physical hardware.
+
+
+## 13. Speechmatics Resource Fabric repair completed — 2026-09-14
+
+The platform repair previously recorded as pending is now **completed**.
+
+Canonical platform repository: `Rafa-Innerchispa/innerops-agentic-platform`.
+
+- PR #45 merged: registered Provider Onboarding manifests are projected into Resource Fabric without duplicating richer native providers; merge SHA `a7300a42fd77dbbb19568300b71ba3fcc53fc6bc`.
+- PR #46 merged: external-provider routing audit truth corrected; final platform main SHA `d2d8e66c9cce9df11a45f05f25a02422d8b09afb`.
+- platform repair task `ops_029e98c0b3f5` is completed with evidence.
+- live Resource Fabric contains both `speechmatics` and `assemblyai`.
+- Physical Guardian project capability link `realtime_stt -> speechmatics` is active and has priority over unlinked AssemblyAI for this project.
+- live routing acceptance selected `speechmatics` with `explicit_project_link=true`.
+- audit evidence now truthfully records `provider_kind=external_voice_provider`, `local_cloud=cloud`, and `reason_codes=[explicit_project_link]`.
+- live audit event `evt_26fc7498a34d8fc20d1968ed` was stored in Mongo, published to NATS JetStream, and exported through OpenTelemetry.
+- no raw Speechmatics secret was placed in Git, coordination, Resource Fabric documents, or logs.
+
+A live deployment drift was also corrected: the MCP runtime directory was missing tracked `audit_fabric.py` and had an older `durable_coordination_spine.py`. Both were aligned to tracked platform main content and the MCP restarted healthy before the final route acceptance.
+
+This means a new chat must **not** recreate a Speechmatics integration, manifest, or project link. Treat Speechmatics as an existing reusable InnerOS provider and use the Resource Fabric capability link already present. Remaining Physical Guardian work is still physical/event-specific: event-laptop microphone + secure key binding, SiMa Modalix/Neat live bring-up, and verified real low-voltage/DMX Physical I/O.
+
+## 2026-09-14 — SiMa onsite assignment confirmed
+
+Official LabLab coordination email received 2026-09-14 from `coordination@lablab.ai` confirms the team is assigned to the **SiMa track** at the AI Infra Summit Hackathon, matching the team's first choice.
+
+Operational truth now:
+- On-site participation is guaranteed.
+- Assigned track: **SiMa — Building Physical AI That Sees, Understands, and Acts**.
+- Do **not** submit this project through the LabLab online hackathon flow; LabLab coordination explicitly stated that the online flow is for the Intel online challenge and a project can only be added to one track.
+- No additional Discord ticket/action is required for track assignment.
+- Previous blocker `formal SiMa assignment pending` is RESOLVED.
+- Sponsor hardware remains onsite: Modalix MLSoC DevKit + Palette Neat, with SiMa mentors onsite. LabLab sponsor communication states one DevKit per team and that teams keep the hardware.
+- Speechmatics remains an additive bonus path and is already routed through InnerOS Resource Fabric as the explicit `realtime_stt` provider for this project.
+- Conference access previously confirmed by LabLab coordination: hackathon participants receive an Expo Pass for Days 1 and 2, with special content-track access on Thursday.
+
+Remaining real gate:
+- Physical Modalix hardware is not yet in hand. Final sponsor-runtime truth, device firmware/Neat compatibility, real inference, measured benchmark and end-to-end physical action verification must be completed onsite.
+
+Onsite sequence remains:
+1. Receive/identify exact Modalix DevKit revision.
+2. Confirm DevKit software with `/etc/buildinfo` and compatible Palette Neat version.
+3. Run vendor hello-world / Model Zoo path first.
+4. Produce one real inference outside Guardian.
+5. Expose normalized loopback `/infer` sidecar and set `GUARDIAN_SIMA_RUNTIME_URL`.
+6. Run Guardian perception -> temporal reasoning -> bounded action -> readback -> interrupt -> safe state -> reverify -> resume/cancel -> Evidence Receipt.
+7. Capture source benchmark artifact and only then allow `MEASURED_SPONSOR_RUNTIME` truth label.
+8. Exercise Speechmatics bounded voice intents without bypassing approval/reverification gates.
