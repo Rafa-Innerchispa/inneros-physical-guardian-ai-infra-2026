@@ -72,6 +72,7 @@
         </div>
         <div class="topbar-actions">
           <span class="status-pill status-live"><span class="pulse-dot"></span> LIVE</span>
+          <span class="status-pill" id="truthBadge">SYNTHETIC FALLBACK</span>
           <span class="status-pill" id="runtimeBadge">Offline runtime ready</span>
           <span class="status-pill" id="ioBadge">Physical I/O fallback</span>
           <button class="ghost-btn" id="resetBtn" type="button">Reset</button>
@@ -186,6 +187,20 @@
                 <button class="approve-btn" id="approveBtn" type="button">Approve bounded action</button>
                 <button class="reject-btn" id="rejectBtn" type="button">Reject</button>
               </div>
+            </div>
+            <div class="lifecycle-panel hidden" id="lifecyclePanel">
+              <span class="decision-label">INTERRUPTIBLE ACTION LIFECYCLE</span>
+              <div class="lifecycle-head">
+                <strong id="lifecycleState">VERIFIED</strong>
+                <small>Resume is fail-closed until safe-state re-verification succeeds.</small>
+              </div>
+              <div class="decision-actions lifecycle-actions">
+                <button class="reject-btn" id="interruptBtn" type="button">Interrupt → safe state</button>
+                <button class="approve-btn hidden" id="reverifyBtn" type="button">Re-verify safe state</button>
+                <button class="approve-btn hidden" id="resumeBtn" type="button">Resume after re-verification</button>
+                <button class="reject-btn hidden" id="cancelBtn" type="button">Cancel safely</button>
+              </div>
+              <div class="lifecycle-timeline" id="lifecycleTimeline"></div>
             </div>
           </article>
         </section>

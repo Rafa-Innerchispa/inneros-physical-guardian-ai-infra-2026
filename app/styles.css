@@ -136,6 +136,17 @@ select:focus { border-color: rgba(44,212,177,.55); box-shadow: 0 0 0 2px rgba(44
 .decision-actions { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
 .approve-btn { color: #04160f; background: var(--accent); }
 .reject-btn { color: #ff9aa3; border-color: rgba(255,126,138,.28); background: rgba(255,126,138,.05); }
+.lifecycle-panel { margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--border-soft); }
+.lifecycle-head { display: grid; gap: 3px; margin: 7px 0 10px; }
+.lifecycle-head strong { color: #e8f5fd; font-size: 11px; letter-spacing: .04em; }
+.lifecycle-head small { color: var(--muted); font-size: 9px; line-height: 1.4; }
+.lifecycle-actions { grid-template-columns: repeat(2,minmax(0,1fr)); }
+.lifecycle-timeline { display: grid; gap: 5px; margin-top: 11px; }
+.lifecycle-event { display: grid; grid-template-columns: minmax(105px,.65fr) minmax(150px,1.6fr) auto; gap: 8px; align-items: start; padding: 7px 8px; border: 1px solid var(--border-soft); border-radius: 8px; background: rgba(255,255,255,.012); }
+.lifecycle-event strong { color: var(--accent-blue); font-size: 8px; letter-spacing: .05em; }
+.lifecycle-event span { color: #a7bbc9; font-size: 8px; line-height: 1.35; }
+.lifecycle-event small { color: var(--muted); font-size: 7px; text-align: right; overflow-wrap: anywhere; }
+.stage.interrupted_safe, .stage.reverification_required, .stage.checkpoint, .stage.cancelled_safe { border-color: rgba(74,159,255,.28); background: rgba(74,159,255,.035); }
 .lower-grid { display: grid; grid-template-columns: 1fr .82fr 1.15fr; gap: 14px; margin-top: 14px; }
 .metric-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
 .metric { padding: 12px; border: 1px solid var(--border-soft); border-radius: 9px; background: rgba(255,255,255,.012); }
