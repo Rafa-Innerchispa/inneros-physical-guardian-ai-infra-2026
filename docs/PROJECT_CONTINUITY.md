@@ -20,7 +20,7 @@ Product thesis: upgrade infrastructure that already exists. Existing CCTV, senso
 ### Permanent InnerOS product
 
 Repository: `Rafa-Innerchispa/inneros-physical-guardian`  
-Canonical main observed before this hackathon-only change: `12e1720ddd439ba796daba3d31029d2151f6a544`
+Canonical main observed during this readiness cycle: `12e1720ddd439ba796daba3d31029d2151f6a544`
 
 This is the reusable InnerOS product. It owns reusable camera ingestion, RTSP/ONVIF, detection/tracking, zones, temporal behavior, policy, Physical I/O, verification, evidence, replay, audit and reusable edge/device contracts.
 
@@ -29,7 +29,8 @@ This is the reusable InnerOS product. It owns reusable camera ingestion, RTSP/ON
 ### AI Infra Summit hackathon composition
 
 Repository: `Rafa-Innerchispa/inneros-physical-guardian-ai-infra-2026`  
-Canonical main immediately before the Speechmatics readiness change: `37b5a722fd838637cf2f27916364fec685146329`
+Baseline immediately before Speechmatics readiness: `37b5a722fd838637cf2f27916364fec685146329`  
+Canonical main after PR #10 Speechmatics/continuity merge: `344855c61d82ee0dc1bbe80afac3beaec64a0525`
 
 This repository owns only the competition delta: Judge UI, sponsor runtime adapters, on-site integration, benchmark collection, demo orchestration, Speechmatics bonus integration, deployment, evidence presentation, pitch and pre-existing-work disclosure.
 
@@ -63,9 +64,20 @@ Existing internal resource truth as of September 14, 2026:
 
 - Speechmatics API credential exists server-side at the logical vault reference `owner_vault:speechmatics/api_key`;
 - registered Speechmatics credit balance: USD 475;
-- never copy the raw API key into Git, coordination, logs, screenshots or chat;
 - no dedicated ChatGPT Speechmatics plugin is currently part of this project;
-- use the official Speechmatics API/SDK and server-side secret binding.
+- use the official Speechmatics API/SDK and server-side secret binding;
+- never copy the raw API key into Git, coordination, logs, screenshots or chat.
+
+Runtime readiness after PR #10:
+
+- primary `.4` hackathon runtime is synchronized exactly to `344855c61d82ee0dc1bbe80afac3beaec64a0525`;
+- isolated project `.venv` exists on `.4`;
+- official `speechmatics-rt==1.1.1` is installed successfully in that venv;
+- `scripts/self_test.py` passes from the merged runtime;
+- full pytest was already 31/31 PASS on the feature tree and GitHub CI passed; pytest itself is not installed in the runtime venv;
+- optional PyAudio microphone install on `.4` is currently blocked because `portaudio.h` is absent and `portaudio19-dev` is not on the bounded peer-package allowlist;
+- this PortAudio limitation is **not a blocker for the event architecture** because `.4` is not the required on-site microphone host. The live mic bridge is intended to run on the event laptop, where the audio dependency can be installed against the actual OS/audio device;
+- the raw Speechmatics key is still vault-only. Current ChatGPT tool surface does not expose a generic secret binder for injecting its value into this project runtime, so do not work around that by copying the secret.
 
 Voice safety invariant:
 
@@ -82,7 +94,7 @@ Raw microphone audio is not written to project storage by the hackathon bridge. 
 
 ## 5. Current interruptible action lifecycle
 
-Current hackathon main already implements:
+Current hackathon main implements:
 
 `PROPOSED → AUTHORIZED → EXECUTING → EXECUTION_VERIFIED → INTERRUPTED → SAFE_STATE_VERIFIED → REVERIFIED → RESUMING → RESUMED_VERIFIED`
 
@@ -100,7 +112,7 @@ Examples:
 - sponsor mock/contract harness → simulated sponsor truth label;
 - real sponsor runtime only after actual SDK/hardware inference → measured sponsor truth label;
 - manual/browser transcript → `CLIENT_REPORTED_TRANSCRIPT`;
-- live Speechmatics bridge may use a live provider label only when the server-side bridge authentication is configured and the transcript came from the official SDK;
+- live Speechmatics bridge may use `SPEECHMATICS_LIVE_TRANSCRIPT` only when the server-side bridge authentication is configured and the transcript came from the official SDK;
 - permanent Physical I/O software readback → `PRODUCT_HTTP_READBACK`;
 - real low-voltage hardware only after actual readback → `REAL_LOW_VOLTAGE_HARDWARE`.
 
@@ -119,8 +131,9 @@ Do not spend the first event hours rewriting Guardian. Use this order:
 7. confirm normalized detections in Judge UI;
 8. connect bounded low-voltage output/readback;
 9. run full loop: detect → decide → authorize → act → verify → interrupt → safe state → reverify → resume/cancel → evidence;
-10. validate Speechmatics live voice path;
-11. only after the full loop works, collect repeatable latency/FPS/power metrics.
+10. install/verify the laptop microphone dependency and bind `SPEECHMATICS_API_KEY` through a safe environment/secret mechanism;
+11. validate Speechmatics live voice path;
+12. only after the full loop works, collect repeatable latency/FPS/power metrics.
 
 Fallback if sponsor hardware is delayed: deterministic owned fixture + local Guardian + local safe actuator. Remote Ecuador CCTV is a bonus proof of retrofit capability, never an on-site dependency.
 
