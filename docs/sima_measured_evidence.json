@@ -1,0 +1,28 @@
+{
+  "schema": "inneros.guardian.sima.evidence.v1",
+  "captured_at": "2026-09-15T19:26:41.504814+00:00",
+  "truth": "MEASURED_SPONSOR_RUNTIME",
+  "measured": true,
+  "gate_reasons": [],
+  "hardware": "SiMa.ai Modalix DevKit MLSoC",
+  "platform_version": "2.1.3",
+  "neat_version": "0.4.0",
+  "model": "yolo26m-seg-bf16-b1",
+  "sample_count": 30,
+  "metrics": {
+    "latency_p50_ms": 27.6,
+    "latency_p95_ms": 28.06,
+    "fps": 36.23,
+    "power_w": null,
+    "energy_j": null
+  },
+  "evidence_id": "sima-modalix-mla-real-yolo26m-20260915",
+  "source_json_sha256": "0e699c16a18a195e1f31d23e40fb0f199a7df3315e76ff9d4be0752aae15ec72",
+  "source_json_name": "real_inference_results.json",
+  "official_docs": {
+    "agents": "https://developer.sima.ai/agents",
+    "quickstart": "https://developer.sima.ai/tools/qsg/index.html",
+    "model_zoo": "https://developer.sima.ai/software/tools/model-zoo/",
+    "benchmark": "https://developer.sima.ai/examples/app/benchmarking/model-benchmark"
+  }
+}
