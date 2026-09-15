@@ -1,18 +1,124 @@
-# InnerOS Physical Guardian — AI Infra Summit 2026
-
-**Live hackathon build. Functional judge demo.**
-
-> **Continuity first:** a new chat/agent must read `docs/PROJECT_CONTINUITY.md` before changing code. It records the permanent-product vs hackathon boundary, canonical SHAs, sponsor strategy, on-site sequence and safety invariants.
-
-> **Event freeze:** the team is officially confirmed for the **SiMa.ai onsite track**. Read `docs/EVENT_FREEZE_2026-09-14.md` before making any pre-judge change. Do not submit this project through the LabLab online Intel flow.
-
-Speechmatics is an optional bonus lane. Guardian remains fully usable without Speechmatics, sponsor hardware or an external network.
+# InnerOS Physical Guardian
 
 InnerOS Physical Guardian turns existing cameras and building sensors into governed Physical AI without forcing customers to replace their security infrastructure.
 
-> **SEE → UNDERSTAND OVER TIME → DECIDE UNDER POLICY → ACT → VERIFY → PROVE**
+The building already had eyes. We gave it perception, judgment, controlled action, verification and memory.
 
-## Run the judge application
+**Current proof, kept honest:**
+
+- Real SiMa Modalix warm-session inference has been measured on 20 distinct 640x640 JPEG frames on September 15, 2026.
+- Guardian's control loop keeps perception, policy, human approval, physical action, verification and evidence as separate truth layers.
+- The permanent Guardian product is disclosed as pre-existing work; this repository contains the hackathon-specific SiMa integration, judge experience, evidence packaging and pitch material.
+
+`SEE -> PERCEIVE -> UNDERSTAND OVER TIME -> DECIDE UNDER POLICY -> HUMAN APPROVAL -> ACT -> VERIFY -> PROVE`
+
+Detector output alone is not the product. Guardian adds time, policy, authority, bounded action, independent verification and an Evidence Receipt that a judge or operator can inspect later.
+
+> **Continuity first:** a new chat or agent must read `docs/PROJECT_CONTINUITY.md` before changing code. It records the permanent-product vs hackathon boundary, canonical SHAs, sponsor strategy, on-site sequence and safety invariants.
+
+> **Event freeze:** the team is officially confirmed for the SiMa.ai onsite track. Read `docs/EVENT_FREEZE_2026-09-14.md` before making any pre-judge change. Do not submit this project through the LabLab online Intel flow.
+
+## Why This Exists
+
+Most buildings already have cameras, DVRs, NVRs, access systems and low-voltage devices. Replacing that estate is expensive, disruptive and creates another lock-in cycle. The practical path is to retrofit intelligence on top of what already works.
+
+Physical Guardian is built for that reality. It can keep the camera investment in place, run perception locally where possible, reduce cloud-video dependence, preserve privacy boundaries and route every action through policy and human authority.
+
+We do not sell another camera. We add intelligence and accountability to the cameras you already own.
+
+## 30-Second Demo Story
+
+A camera or staged webcam source provides a frame. SiMa Modalix performs efficient edge perception. Guardian normalizes the detection, reasons over time and zones, decides what policy allows, asks a human before action, executes only bounded actions, verifies the result through readback and stores an Evidence Receipt.
+
+If any proof is missing, the system says so. A webcam preview is not SiMa truth. A detection is not an authorized action. A simulated fallback is not measured hardware. The demo is designed to fail closed rather than inflate truth.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    A[Existing camera or webcam source] --> B[Bounded source adapter]
+    B --> C[SiMa Modalix MLA perception]
+    C --> D[Normalized detections]
+    D --> E[Tracking and temporal context]
+    E --> F[Guardian policy]
+    F --> G[Human approval]
+    G --> H[Bounded physical I/O]
+    H --> I[Verification and readback]
+    I --> J[Evidence Receipt and Forensic Replay]
+```
+
+The inference hardware can change. The safety and accountability chain stays intact.
+
+See `docs/ARCHITECTURE_AND_PROOF.md`.
+
+## What Guardian Adds Beyond Object Detection
+
+| Layer | What it answers |
+| --- | --- |
+| Perception | What is visible in this frame? |
+| Temporal context | What has been happening over time? |
+| Policy | What is allowed, denied or requires escalation? |
+| Human approval | Who authorized a physical action? |
+| Bounded action | What low-impact action was requested and executed? |
+| Verification | Did the expected physical/software state actually happen? |
+| Evidence | Can we prove the source, decision, action and readback later? |
+
+## Current Measured Hardware Proof (2026-09-15)
+
+AntiGravity task `ops_b21694986b2d` passed a warm-session Modalix JPEG cadence proof using non-sensitive test frames. This proves a reusable warm target inference path. It does not yet certify the final webcam-to-Evidence-Receipt integration SHA.
+
+| Measurement | Result |
+| --- | ---: |
+| Distinct 640x640 JPEG frames | 20 |
+| Model load/build/init | 2614.001 ms, once for the session |
+| Average host round trip | 84.96 ms |
+| p50 host round trip | 81.42 ms |
+| p95 / worst host round trip | 149.27 ms |
+| Minimum host round trip | 79.09 ms |
+| Sustained cadence | 11.77 fps |
+| Average target preprocessing | 13.2 ms |
+| Average target MLA inference | 27.96 ms |
+| Average decode/postprocess | 37.18 ms |
+| Corrupt JPEG behavior | `IMAGE_DECODE_FAILED`, failed closed |
+| Post-error recovery | next valid frame passed without session restart |
+
+Truth limits for this table:
+
+- The frames produced low-confidence detections below Guardian's policy-action threshold of 0.25.
+- Those detections are perception telemetry only, not successful security incidents or action triggers.
+- Final webcam -> Guardian -> Modalix -> policy -> action -> verify -> Evidence Receipt integration is still pending Codex A final pushed SHA / hardware validation.
+
+Earlier target proof also established a real aarch64 Modalix path using PyNeat 0.4.0 and real `runner.run([tensor])` calls that returned 10 output heads. Public docs intentionally omit private network addresses, credentials and unsafe connection details.
+
+## Truth Discipline
+
+The default offline path is allowed for rehearsal, but it stays labeled as fixture data. Strict live mode must not pass without source proof, fresh frame evidence, runtime identity, validated detections, policy truth, physical I/O truth and verification/readback truth.
+
+Common labels:
+
+- `SIMULATED_FIXTURE`: owned deterministic demo data.
+- `HISTORICAL_BENCHMARK`: dated measurement evidence that cannot certify a new live frame.
+- `MEASURED_SPONSOR_RUNTIME`: real sponsor hardware/runtime evidence for the current inference path.
+- `PRODUCT_HTTP_READBACK`: permanent-product HTTP action plus verified software readback.
+- `REAL_LOW_VOLTAGE_HARDWARE`: reserved for actual low-voltage hardware readback.
+- `FAILED_CLOSED` or `UNVERIFIED`: the chain did not prove enough to claim success.
+
+## Safety Boundary
+
+Judge actions are low-impact and allowlisted: beacon warning, operator notification and reference attention light. Door unlock, alarm disable, arbitrary shell execution and gate opening are explicitly denied in the demo policy.
+
+Human approval is required before the ACT stage can complete. Voice can explain, interrupt, re-verify, resume after the canonical gate or cancel safely. Voice cannot approve a new physical action or bypass policy.
+
+## Use Cases
+
+- Residential and commercial buildings with existing CCTV estates.
+- Gated communities and campuses that need operator escalation without camera replacement.
+- Warehouses and industrial sites with after-hours or restricted-zone monitoring.
+- Security integrators and managed service providers that need a portable Physical AI layer.
+
+Example scenarios include restricted-zone activity, loitering, repeated access attempts, after-hours activity, unattended object review, operator escalation and bounded beacon/light/notification/relay actions. The system does not claim criminal intent or guaranteed incident prevention.
+
+## Run the Judge Application
 
 Requires Python 3.11+ and no third-party Python package for the demo runtime.
 
@@ -22,7 +128,7 @@ python3 scripts/run_demo.py
 
 Open `http://127.0.0.1:8787`.
 
-Before presenting, exercise the exact governed lifecycle with:
+Before presenting, exercise the governed lifecycle with:
 
 ```bash
 python3 scripts/judge_rehearsal.py
@@ -36,19 +142,7 @@ python3 scripts/judge_rehearsal.py --runtime sima-slot --require-measured-sponso
 
 The complete demo must not be described as live if that strict gate fails.
 
-The single-screen WebUI includes:
-
-- camera/sensor scenario visualization;
-- normalized perception state;
-- temporal/policy reasoning;
-- explicit human action approval;
-- bounded reference or permanent-product Physical I/O;
-- verification/readback state;
-- forensic evidence bundle with truth labels;
-- replaceable SiMa.ai, Qualcomm and Intel runtime slots;
-- measured composition timings clearly separated from simulated data.
-
-## Zero-dependency acceptance check
+## Zero-Dependency Acceptance Check
 
 A clean Python host can validate the application without installing pytest or any package:
 
@@ -56,7 +150,7 @@ A clean Python host can validate the application without installing pytest or an
 python3 scripts/self_test.py
 ```
 
-The acceptance script boots ephemeral loopback servers and verifies the offline runtime, human approval gate, safe reject path, dangerous-action fail-closed behavior, permanent-product Physical I/O contract/readback, WebUI delivery, HTTP demo flow, evidence production and optional hosted authentication.
+The acceptance script boots ephemeral loopback servers and verifies the offline runtime, human approval gate, safe reject path, dangerous-action fail-closed behavior, Physical I/O contract/readback, WebUI delivery, HTTP demo flow, evidence production and optional hosted authentication.
 
 The developer test suite remains available when pytest is installed:
 
@@ -64,13 +158,23 @@ The developer test suite remains available when pytest is installed:
 python3 -m pytest -q
 ```
 
-## Why this architecture matters
+## Repository Map
 
-Most buildings do not need another camera platform. They need an intelligence and control layer that can work with the cameras, NVRs, DVRs and sensors they already own.
+- `app/` - single-screen judge WebUI.
+- `src/guardian_demo/` - demo engine, sponsor runtime boundary, Physical I/O bridge, voice lane and HTTP server.
+- `scripts/run_demo.py` - one-command application start.
+- `scripts/judge_rehearsal.py` - lifecycle rehearsal and strict live truth gate.
+- `scripts/sima_onsite_preflight.py` - SiMa host/device readiness checks.
+- `scripts/sima_capture_evidence.py` - sponsor evidence/benchmark capture with truth gating.
+- `scripts/self_test.py` - zero-dependency acceptance test.
+- `docs/ENGLISH_PITCH.md` - presentation scripts and judge Q&A.
+- `docs/DEMO_STORY.md` - demo narrative and stage direction.
+- `docs/COMMERCIAL_STORY.md` - buyer and integrator narrative.
+- `docs/ARCHITECTURE_AND_PROOF.md` - truth-layer architecture and proof status.
+- `docs/FAQ.md` - crisp answers for judges and partners.
+- `PREEXISTING_DISCLOSURE.md`, `BASELINE_PROVENANCE.json`, `HACKATHON_SCOPE.md` - frozen provenance boundary.
 
-The permanent Physical Guardian product supplies reusable capabilities for camera ingestion, RTSP/ONVIF, event normalization, detection, tracking, zones, temporal behavior, low-cost edge transport, policy, physical I/O and evidence.
-
-This hackathon repository does **not** copy that product. It implements the hackathon-specific composition, sponsor runtime boundary, judge experience, evidence presentation and deployment path.
+## Hackathon Delta vs Pre-Existing Product
 
 Permanent product:
 
@@ -80,109 +184,18 @@ Hackathon composition:
 
 `Rafa-Innerchispa/inneros-physical-guardian-ai-infra-2026`
 
-## Runtime portability
+The permanent product existed before the hackathon and owns reusable camera ingestion, RTSP/ONVIF, tracking, zones, temporal analysis, edge transport, policy, Physical I/O and evidence foundations. This repository owns the competition-specific SiMa runtime path, judge console, evidence/benchmark gates, demo orchestration, Speechmatics bonus integration and public story package.
 
-The judge app has one offline-safe deterministic runtime plus local-only sponsor SDK bridges.
+See `PREEXISTING_DISCLOSURE.md`, `BASELINE_PROVENANCE.json` and `HACKATHON_SCOPE.md`.
 
-| Runtime | Default state | On-site binding |
-| --- | --- | --- |
-| InnerOS deterministic fixture | Ready | none |
-| SiMa.ai | Track confirmed; awaiting onsite DevKit/SDK binding | `GUARDIAN_SIMA_RUNTIME_URL` |
-| Qualcomm | Awaiting hardware/SDK | `GUARDIAN_QUALCOMM_RUNTIME_URL` |
-| Intel | Awaiting hardware/SDK | `GUARDIAN_INTEL_RUNTIME_URL` |
+## Roadmap And Current Integration Status
 
-A sponsor sidecar exposes `POST /infer` on loopback. Once configured, the corresponding runtime becomes selectable in the WebUI without changing Guardian policy, approval, verification or evidence code.
+SiMa gives the building efficient edge perception. InnerOS Guardian turns that perception into governed physical action with interruption, verification and evidence. The immediate next milestone is Codex A's final pushed backend candidate and hardware validation for the full webcam -> Guardian -> Modalix -> policy -> action -> verify -> Evidence Receipt chain.
 
-See `docs/SPONSOR_RUNTIME_BRIDGE.md`.
-
-## Permanent-product Physical I/O
-
-The judge app can optionally use the permanent Physical Guardian HTTP I/O contract after human approval:
-
-```bash
-export GUARDIAN_PHYSICAL_IO_URL=http://127.0.0.1:8765
-python3 scripts/run_demo.py
-```
-
-The bridge is loopback-only. For mapped low-impact actions it performs `/v1/action` followed by `/v1/verify`; a failed readback ends as `ACTION_FAILED_SAFE` rather than silently reverting to a simulated success.
-
-Truth is explicit:
-
-- `SIMULATED_REFERENCE_IO` — offline fallback;
-- `PRODUCT_HTTP_READBACK` — permanent HTTP contract action + verified software readback;
-- `REAL_LOW_VOLTAGE_HARDWARE` — reserved for an endpoint that explicitly verifies actual low-voltage hardware;
-- `FAILED_CLOSED` — configured I/O could not be verified.
-
-See `docs/PHYSICAL_IO_BRIDGE.md`.
-
-## Truth and benchmark discipline
-
-The default judge path intentionally labels:
-
-- camera event: `SIMULATED_FIXTURE`;
-- offline detections: `SIMULATED_FIXTURE`;
-- policy/temporal logic: `DETERMINISTIC_RULE`;
-- demo physical output: `SIMULATED_REFERENCE_IO` until the permanent I/O contract or safe electronics are attached;
-- composition timings: measured live;
-- sponsor benchmark: not claimed until real assigned hardware produces repeatable measurements.
-
-The system will fail closed rather than fabricate sponsor or physical-output success.
-
-## Safety boundary
-
-Judge actions are low-impact and allowlisted: beacon warning, operator notification and reference attention light. Door unlock, alarm disable, arbitrary shell execution and gate opening are explicitly denied in the demo policy.
-
-Human approval is required before the demo ACT stage can complete. After an interruption, resume is denied until the safe state has been explicitly re-verified.
-
-## Hosted judge mode
-
-Optional HTTP Basic access control is configured only through environment variables:
-
-```bash
-export GUARDIAN_DEMO_USER="judge"
-export GUARDIAN_DEMO_PASSWORD="<secret-outside-git>"
-python3 scripts/run_demo.py --host 0.0.0.0 --port 8787
-```
-
-Canonical container recipe: root `Dockerfile`.
-
-Deployment details: `DEPLOYMENT.md` and `docs/HOSTED_JUDGE_DEPLOY.md`.
-
-## Current hackathon build artifacts
-
-- `app/` — single-screen judge WebUI;
-- `src/guardian_demo/` — demo engine, sponsor runtime boundary, Physical I/O bridge, voice lane and HTTP server;
-- `scripts/run_demo.py` — one-command application start;
-- `scripts/judge_rehearsal.py` — lifecycle rehearsal + strict live truth gate;
-- `scripts/event_preflight.py` — event readiness without exposing secrets;
-- `scripts/sima_onsite_preflight.py` — SiMa host/device readiness;
-- `scripts/sima_capture_evidence.py` — sponsor evidence/benchmark capture with truth gating;
-- `scripts/speechmatics_voice_live.py` — official Speechmatics live microphone bridge;
-- `scripts/self_test.py` — zero-dependency acceptance test;
-- `scripts/mock_sponsor_sidecar.py` — contract-only sponsor sidecar harness;
-- `tests/` — safety/runtime/server/Physical-I/O/voice/onsite developer checks;
-- `docs/PROJECT_CONTINUITY.md` — canonical handoff for future chats/agents;
-- `docs/EVENT_FREEZE_2026-09-14.md` — final scope freeze, SiMa bring-up order and judge truth gates;
-- `docs/JUDGE_DEMO_RUNBOOK.md` — current 90-second SiMa + Speechmatics judge flow;
-- `docs/SPONSOR_RUNTIME_BRIDGE.md` — on-site SDK integration contract;
-- `docs/PHYSICAL_IO_BRIDGE.md` — permanent-product action/readback integration;
-- `PREEXISTING_DISCLOSURE.md` and `BASELINE_PROVENANCE.json` — frozen provenance boundary.
-
-## Pre-existing work disclosure
-
-This project existed before the hackathon as the permanent InnerOS Physical Guardian product. The pre-kickoff baseline is explicitly disclosed instead of being passed off as work created during the competition.
-
-See:
-
-- `PREEXISTING_DISCLOSURE.md`
-- `BASELINE_PROVENANCE.json`
-- `HACKATHON_SCOPE.md`
-- `docs/PROJECT_BRIEF.md`
-- `docs/TRACK_STRATEGY.md`
-- `docs/ONSITE_HARDWARE_PLAYBOOK.md`
+Until that proof lands, the repository should present the Modalix warm-session measurement as real hardware proof for perception only, not as an end-to-end live security incident.
 
 ## Team
 
 **InnerOS Physical Guardian**
 
-The team is intentionally kept small. Priority additions are a fluent English technical presenter and hands-on Edge AI / embedded optimization talent who can contribute directly to the existing build.
+The team is intentionally small and grounded in real building-security integration constraints in Ecuador and Latin America: mixed camera generations, limited replacement budgets, local-first resilience and the need to keep existing infrastructure working while intelligence is added.
