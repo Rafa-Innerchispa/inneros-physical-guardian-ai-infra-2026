@@ -175,19 +175,45 @@ function clearOverlay() {
   ctx.clearRect(0, 0, els.overlayCanvas.width, els.overlayCanvas.height);
 }
 
-function detectionFrameMatches(payload) {
-  if (!latestFrame) return false;
-  const frameRef =
+function frameRefFromPayload(payload) {
+  return (
     payload?.frame_id ||
     payload?.frame_ref ||
     payload?.source_frame_id ||
     payload?.source?.frame_id ||
-    payload?.camera?.frame_id;
-  const sourceRef = payload?.source_id || payload?.source || payload?.source?.id || payload?.camera?.source_id;
-  if (!frameRef && !sourceRef) return false;
-  if (frameRef && frameRef !== latestFrame.frameId) return false;
-  if (sourceRef && String(sourceRef) !== latestFrame.sourceId) return false;
-  return true;
+    payload?.camera?.frame_id ||
+    null
+  );
+}
+
+function sourceRefFromPayload(payload) {
+  if (payload?.source && typeof payload.source === "object") {
+    return payload.source.source_id || payload.source.id || payload.source.name || null;
+  }
+  return payload?.source_id || payload?.source || payload?.camera?.source_id || null;
+}
+
+function detectionFrameMatches(payload) {
+  if (!latestFrame) return false;
+  const frameRef = frameRefFromPayload(payload);
+  const sourceRef = sourceRefFromPayload(payload);
+  if (!frameRef || !sourceRef) return false;
+  return String(frameRef) === latestFrame.frameId && String(sourceRef) === latestFrame.sourceId;
+}
+
+function isDrawableDetection(detection) {
+  if (!detection || typeof detection !== "object" || !Array.isArray(detection.bbox)) return false;
+  const [rawX, rawY, rawW, rawH] = detection.bbox.map(Number);
+  const confidence = detection.confidence;
+  return (
+    [rawX, rawY, rawW, rawH].every(Number.isFinite) &&
+    rawW > 0 &&
+    rawH > 0 &&
+    typeof confidence === "number" &&
+    Number.isFinite(confidence) &&
+    confidence >= 0 &&
+    confidence <= 1
+  );
 }
 
 function extractDetections(traceOrPayload) {
@@ -201,7 +227,7 @@ function extractDetections(traceOrPayload) {
   ];
   const raw = candidates.find((value) => Array.isArray(value));
   if (!raw) return [];
-  return raw.filter((item) => item && typeof item === "object" && Array.isArray(item.bbox));
+  return raw.filter(isDrawableDetection);
 }
 
 function drawDetections(detections, payload) {
@@ -556,7 +582,8 @@ function renderReceipt(evidence, trace, framePayload = null) {
 
   els.receiptFrame.textContent = frameText;
   els.receiptSima.textContent = simaTruth;
-  els.receiptDetections.textContent = detections.length
+  const detectionsMatchFrame = detectionFrameMatches(framePayload || trace || {});
+  els.receiptDetections.textContent = detections.length && detectionsMatchFrame
     ? `${detections.length} backend detection(s) for matched frame`
     : "No backend detections";
   els.receiptDecision.textContent = humanize(trace?.decision, "No decision");
