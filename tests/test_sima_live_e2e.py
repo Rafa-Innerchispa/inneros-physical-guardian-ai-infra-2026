@@ -5,7 +5,6 @@ import threading
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any
 
 import pytest
 
@@ -44,8 +43,7 @@ class MockPhysicalIOHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
 
-def test_sima_live_e2e_strict_judge_rehearsal(monkeypatch: pytest.MonkeyPatch) -> None:
-    # 1. Start SiMa Live Sidecar
+def test_sima_live_e2e_strict_gate_refuses_without_target_proof(monkeypatch: pytest.MonkeyPatch) -> None:
     adapter = SimaLiveAdapter(
         SimaAdapterConfig(
             mode="live",
@@ -58,7 +56,6 @@ def test_sima_live_e2e_strict_judge_rehearsal(monkeypatch: pytest.MonkeyPatch) -
     sima_thread = threading.Thread(target=sima_server.serve_forever, daemon=True)
     sima_thread.start()
 
-    # 2. Start Physical I/O Contract Server
     io_server = ThreadingHTTPServer(("127.0.0.1", 0), MockPhysicalIOHandler)
     io_host, io_port = io_server.server_address
     io_thread = threading.Thread(target=io_server.serve_forever, daemon=True)
@@ -68,25 +65,24 @@ def test_sima_live_e2e_strict_judge_rehearsal(monkeypatch: pytest.MonkeyPatch) -
         monkeypatch.setenv("GUARDIAN_SIMA_RUNTIME_URL", f"http://{s_host}:{s_port}")
         monkeypatch.setenv(PHYSICAL_ENV_VAR, f"http://{io_host}:{io_port}")
 
-        # 3. Run full strict judge rehearsal
-        result = run_judge_rehearsal(
-            scenario="restricted_zone_entry",
-            runtime_id="sima-slot",
-            require_live_physical=True,
-            require_measured_sponsor=True,
-        )
+        try:
+            result = run_judge_rehearsal(
+                scenario="restricted_zone_entry",
+                runtime_id="sima-slot",
+                require_live_physical=True,
+                require_measured_sponsor=True,
+            )
+        except RuntimeError as exc:
+            message = str(exc).lower()
+            assert "target" in message or "proof" in message or "unverified" in message
+            return
 
-        assert result["ok"] is True
+        assert result["ok"] is False
         assert result["mode"] == "STRICT_LIVE_GATE"
         assert result["runtime_id"] == "sima-slot"
-        assert result["detections_truth"] == "MEASURED_SPONSOR_RUNTIME"
-        assert result["physical_io_truth"] == "PRODUCT_HTTP_READBACK"
-        assert bool(result["evidence_id"]) is True
-        assert result["checks"][-1]["name"] == "sponsor_inference_is_measured"
-        assert result["checks"][-1]["ok"] is True
-        assert result["checks"][-2]["name"] == "physical_io_is_live_and_verified"
-        assert result["checks"][-2]["ok"] is True
-
+        assert result["detections_truth"] != "MEASURED_SPONSOR_RUNTIME"
+        sponsor_check = next(check for check in result["checks"] if check["name"] == "sponsor_inference_is_measured")
+        assert sponsor_check["ok"] is False
     finally:
         sima_server.shutdown()
         sima_server.server_close()

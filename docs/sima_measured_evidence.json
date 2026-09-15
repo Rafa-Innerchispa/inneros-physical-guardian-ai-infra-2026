@@ -1,8 +1,11 @@
 {
   "schema": "inneros.guardian.sima.evidence.v1",
   "captured_at": "2026-09-15T19:26:41.504814+00:00",
-  "truth": "MEASURED_SPONSOR_RUNTIME",
+  "truth": "HISTORICAL_BENCHMARK",
   "measured": true,
+  "certifies_live_frames": false,
+  "live_telemetry": false,
+  "semantics": "Historical Modalix benchmark evidence only. These measured values do not certify any new live camera frame or current SiMa runtime request.",
   "gate_reasons": [],
   "hardware": "SiMa.ai Modalix DevKit MLSoC",
   "platform_version": "2.1.3",
