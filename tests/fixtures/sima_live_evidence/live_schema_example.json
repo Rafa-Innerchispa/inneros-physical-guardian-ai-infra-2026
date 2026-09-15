@@ -1,0 +1,31 @@
+{
+  "schema": "inneros.guardian.sima.live_evidence.v1",
+  "captured_at": "2026-09-15T19:05:00+00:00",
+  "frame_timestamp": "2026-09-15T19:04:59.950000+00:00",
+  "truth": "MEASURED_SPONSOR_RUNTIME",
+  "live": true,
+  "sponsor_runtime": "sima",
+  "device": {
+    "kind": "modalix",
+    "identifier": "Modalix MLSoC DevKit"
+  },
+  "model": "yolo_v8s",
+  "input_source": "camera:/dev/video0",
+  "max_staleness_ms": 5000,
+  "detections": [
+    {
+      "class": "person",
+      "confidence": 0.91,
+      "bbox": [0.15, 0.22, 0.48, 0.81]
+    }
+  ],
+  "metrics": {
+    "latency_ms": 4.2,
+    "fps": 118.0
+  },
+  "metrics_provenance": "antigravity_adapter_sidecar_log",
+  "provenance": {
+    "adapter": "antigravity-sima-infer",
+    "evidence_id": "LIVE-SCHEMA-EXAMPLE-001"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "schema": "inneros.guardian.sima.live_evidence.v1",
+  "captured_at": "2026-09-15T18:00:00+00:00",
+  "frame_timestamp": "2026-09-15T18:00:00+00:00",
+  "truth": "SIMULATED_FIXTURE",
+  "live": false,
+  "sponsor_runtime": "sima",
+  "device": {
+    "kind": "modalix",
+    "identifier": "SIMULATED_MODALIX_FIXTURE"
+  },
+  "model": "yolo_v8s",
+  "input_source": "fixture:tests/fixtures/sima_live_evidence/simulated_fixture.json",
+  "max_staleness_ms": 5000,
+  "detections": [
+    {
+      "class": "person",
+      "confidence": 0.88,
+      "bbox": [0.12, 0.18, 0.42, 0.76]
+    }
+  ],
+  "provenance": {
+    "adapter": "offline-test-fixture",
+    "evidence_id": "SIMULATED-FIXTURE-001"
+  }
+}
