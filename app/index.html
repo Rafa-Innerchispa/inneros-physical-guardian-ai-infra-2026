@@ -3,263 +3,256 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#06111f" />
-  <title>InnerOS Physical Guardian | AI Infra Summit 2026</title>
+  <meta name="theme-color" content="#07080b" />
+  <title>InnerOS Physical Guardian | Judge Console V2</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-  <div class="app-shell workforce-shell">
-    <aside class="sidebar" aria-label="Physical Guardian navigation">
-      <div class="sidebar-brand">
-        <div class="brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><path d="M12 3 4.5 6.2v5.2c0 4.8 3.1 8.2 7.5 9.6 4.4-1.4 7.5-4.8 7.5-9.6V6.2L12 3Z"/><path d="m9 12 2 2 4-4"/></svg>
-        </div>
-        <div class="brand-copy">
-          <strong>InnerOS</strong>
-          <small>Physical Guardian</small>
-        </div>
+  <main class="console" id="overview">
+    <header class="masthead">
+      <div class="brand-block">
+        <span class="eyebrow">PHYSICAL AI JUDGE CONSOLE V2</span>
+        <h1>Physical Guardian</h1>
+        <p>See. Understand. Decide. Act. Verify. Prove.</p>
       </div>
-
-      <nav class="side-nav">
-        <div class="nav-group">
-          <span class="nav-label">Overview</span>
-          <a class="nav-item active" href="#overview">
-            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-            <span>Dashboard</span>
-          </a>
-        </div>
-        <div class="nav-group">
-          <span class="nav-label">Monitor</span>
-          <a class="nav-item" href="#live-monitor">
-            <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="13" rx="2"/><path d="m8 21 4-3 4 3"/><path d="m9 11 2 2 4-4"/></svg>
-            <span>Live Monitor</span>
-          </a>
-          <a class="nav-item" href="#decision-gate">
-            <svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.5 2.8 7.6 7 9 4.2-1.4 7-4.5 7-9V6l-7-3Z"/><path d="M9 12h6"/></svg>
-            <span>Decision Gate</span>
-          </a>
-        </div>
-        <div class="nav-group">
-          <span class="nav-label">Proof</span>
-          <a class="nav-item" href="#runtime-section">
-            <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3"/></svg>
-            <span>Hardware & Runtime</span>
-          </a>
-          <a class="nav-item" href="#evidence-section">
-            <svg viewBox="0 0 24 24"><path d="M6 3h9l3 3v15H6z"/><path d="M15 3v4h4M9 12h6M9 16h6M9 8h2"/></svg>
-            <span>Evidence</span>
-          </a>
-        </div>
-      </nav>
-
-      <div class="sidebar-status">
-        <span class="sidebar-kicker"><i class="pulse-dot"></i> LIVE BUILD</span>
-        <strong>AI Infra Summit 2026</strong>
-        <small>Governed Physical AI · Santa Clara</small>
+      <div class="operator-strip" aria-label="Operator controls">
+        <label class="select-label">
+          <span>Source</span>
+          <select id="sourceSelect">
+            <option value="laptop-webcam">LAPTOP WEBCAM</option>
+            <option value="local-prerecorded">LOCAL PRERECORDED</option>
+          </select>
+        </label>
+        <label class="select-label">
+          <span>Scenario</span>
+          <select id="scenarioSelect">
+            <option value="loitering_after_hours">After-hours loitering</option>
+            <option value="repeated_access_attempt">Repeated access attempt</option>
+            <option value="restricted_zone_entry">Restricted equipment zone</option>
+          </select>
+        </label>
+        <label class="select-label">
+          <span>Backend runtime</span>
+          <select id="runtimeSelect"></select>
+        </label>
+        <span class="status-pill hidden" id="truthBadge">UNVERIFIED</span>
+        <span class="status-pill hidden" id="ioBadge">UNVERIFIED</span>
+        <button class="icon-btn" id="resetBtn" type="button" title="Reset demo">RESET</button>
       </div>
-    </aside>
+    </header>
 
-    <div class="content-shell">
-      <header class="topbar">
-        <div class="mobile-brand">
-          <div class="brand-mark" aria-hidden="true">IG</div>
-        </div>
-        <div class="page-heading">
-          <span class="eyebrow">PHYSICAL AI CONTROL PLANE</span>
-          <h1>Physical Guardian</h1>
-          <p>Observe, reason, approve, act, verify and preserve evidence.</p>
-        </div>
-        <div class="topbar-actions">
-          <span class="status-pill status-live"><span class="pulse-dot"></span> LIVE</span>
-          <span class="status-pill" id="truthBadge">SYNTHETIC FALLBACK</span>
-          <span class="status-pill" id="runtimeBadge">Offline runtime ready</span>
-          <span class="status-pill" id="ioBadge">Physical I/O fallback</span>
-          <button class="ghost-btn" id="resetBtn" type="button">Reset</button>
-        </div>
-      </header>
+    <section class="health-strip" aria-label="Physical Guardian health strip">
+      <article class="health-cell" data-health="camera">
+        <span>CAMERA</span>
+        <strong id="cameraHealth">BLOCKED</strong>
+        <small id="cameraTruth">UNVERIFIED</small>
+      </article>
+      <article class="health-cell" data-health="sima">
+        <span>SiMa MODALIX</span>
+        <strong id="simaHealth">BLOCKED</strong>
+        <small id="simaTruth">UNVERIFIED</small>
+      </article>
+      <article class="health-cell" data-health="mla">
+        <span>MLA</span>
+        <strong id="mlaHealth">BLOCKED</strong>
+        <small id="mlaTruth">UNVERIFIED</small>
+      </article>
+      <article class="health-cell" data-health="guardian">
+        <span>GUARDIAN</span>
+        <strong id="guardianHealth">OFFLINE</strong>
+        <small id="guardianTruth">UNVERIFIED</small>
+      </article>
+      <article class="health-cell" data-health="io">
+        <span>PHYSICAL I/O</span>
+        <strong id="ioHealth">BLOCKED</strong>
+        <small id="ioTruth">UNVERIFIED</small>
+      </article>
+      <article class="health-cell" data-health="evidence">
+        <span>EVIDENCE</span>
+        <strong id="evidenceHealth">BLOCKED</strong>
+        <small id="evidenceTruth">UNVERIFIED</small>
+      </article>
+    </section>
 
-      <main class="dashboard">
-        <section class="hero-card panel" id="overview">
-          <div class="panel-head">
-            <div>
-              <span class="section-kicker">JUDGE MODE</span>
-              <h2>See. Understand. Decide. Act. Verify. Prove.</h2>
-              <p class="hero-copy">One governed control loop from an existing camera event to a bounded physical action and forensic proof.</p>
-            </div>
-            <div class="truth-legend">
-              <span><i class="legend-dot measured"></i>Measured</span>
-              <span><i class="legend-dot deterministic"></i>Deterministic</span>
-              <span><i class="legend-dot simulated"></i>Simulated fixture</span>
-            </div>
-          </div>
-
-          <div class="control-strip">
-            <label>
-              <span>Scenario</span>
-              <select id="scenarioSelect">
-                <option value="loitering_after_hours">After-hours loitering</option>
-                <option value="repeated_access_attempt">Repeated access attempt</option>
-                <option value="restricted_zone_entry">Restricted equipment zone</option>
-              </select>
-            </label>
-            <label>
-              <span>Inference target</span>
-              <select id="runtimeSelect"></select>
-            </label>
-            <button class="primary-btn" id="runBtn" type="button">Run live decision</button>
-            <div class="keyboard-hint">R run · A approve · X reset</div>
-          </div>
-        </section>
-
-        <section class="workspace-grid" id="live-monitor">
-          <article class="camera-card panel">
-            <div class="panel-head compact">
-              <div>
-                <span class="section-kicker">LIVE MONITOR</span>
-                <h3>Camera / sensor event</h3>
-              </div>
-              <span class="camera-state" id="cameraState">Fixture standby</span>
-            </div>
-            <div class="camera-stage" id="cameraStage">
-              <div class="camera-noise"></div>
-              <div class="camera-grid"></div>
-              <div class="zone zone-a"><span id="zoneLabel">RESTRICTED ZONE</span></div>
-              <div class="subject" id="subjectBox">
-                <span class="subject-label" id="subjectLabel">PERSON · --</span>
-              </div>
-              <div class="camera-meta">
-                <span>CAM-EDGE-04</span>
-                <span id="cameraClock">--:--:-- UTC</span>
-              </div>
-              <div class="scanline"></div>
-            </div>
-            <div class="event-summary">
-              <span class="severity-badge" id="severityBadge">STANDBY</span>
-              <div>
-                <strong id="eventTitle">Ready for deterministic judge scenario</strong>
-                <p id="eventText">No customer footage or private camera topology is required for this fallback demo.</p>
-              </div>
-            </div>
-          </article>
-
-          <article class="pipeline-card panel">
-            <div class="panel-head compact">
-              <div>
-                <span class="section-kicker">GUARDIAN LOOP</span>
-                <h3>Physical AI reasoning chain</h3>
-              </div>
-              <span class="trace-id" id="traceId">No active trace</span>
-            </div>
-            <div class="pipeline" id="pipeline">
-              <div class="stage" data-stage="SEE"><span>01</span><div><strong>SEE</strong><small>Awaiting event</small></div></div>
-              <div class="stage" data-stage="UNDERSTAND"><span>02</span><div><strong>UNDERSTAND</strong><small>Normalize perception</small></div></div>
-              <div class="stage" data-stage="DECIDE"><span>03</span><div><strong>DECIDE</strong><small>Policy + temporal context</small></div></div>
-              <div class="stage" data-stage="ACT"><span>04</span><div><strong>ACT</strong><small>Bounded action only</small></div></div>
-              <div class="stage" data-stage="VERIFY"><span>05</span><div><strong>VERIFY</strong><small>Readback / expected state</small></div></div>
-              <div class="stage" data-stage="PROVE"><span>06</span><div><strong>PROVE</strong><small>Seal evidence</small></div></div>
-            </div>
-          </article>
-
-          <article class="decision-card panel" id="decision-gate">
-            <div class="panel-head compact">
-              <div>
-                <span class="section-kicker">HUMAN GOVERNANCE</span>
-                <h3>Action gate</h3>
-              </div>
-              <span class="policy-badge" id="policyBadge">Fail-closed</span>
-            </div>
-            <div class="decision-empty" id="decisionEmpty">
-              <div class="shield-icon">✓</div>
-              <strong>No physical action pending</strong>
-              <p>Guardian will propose only an allowlisted low-impact action. Human approval remains explicit.</p>
-            </div>
-            <div class="decision-content hidden" id="decisionContent">
-              <span class="decision-label">PROPOSED ACTION</span>
-              <h4 id="actionTitle">Beacon warning</h4>
-              <p id="actionReason"></p>
-              <dl class="action-meta">
-                <div><dt>Target</dt><dd id="actionTarget">—</dd></div>
-                <div><dt>Impact</dt><dd id="actionImpact">LOW</dd></div>
-                <div><dt>Approval</dt><dd>REQUIRED</dd></div>
-              </dl>
-              <div class="decision-actions">
-                <button class="approve-btn" id="approveBtn" type="button">Approve bounded action</button>
-                <button class="reject-btn" id="rejectBtn" type="button">Reject</button>
-              </div>
-            </div>
-            <div class="lifecycle-panel hidden" id="lifecyclePanel">
-              <span class="decision-label">INTERRUPTIBLE ACTION LIFECYCLE</span>
-              <div class="lifecycle-head">
-                <strong id="lifecycleState">VERIFIED</strong>
-                <small>Resume is fail-closed until safe-state re-verification succeeds.</small>
-              </div>
-              <div class="decision-actions lifecycle-actions">
-                <button class="reject-btn" id="interruptBtn" type="button">Interrupt → safe state</button>
-                <button class="approve-btn hidden" id="reverifyBtn" type="button">Re-verify safe state</button>
-                <button class="approve-btn hidden" id="resumeBtn" type="button">Resume after re-verification</button>
-                <button class="reject-btn hidden" id="cancelBtn" type="button">Cancel safely</button>
-              </div>
-              <div class="lifecycle-timeline" id="lifecycleTimeline"></div>
-            </div>
-          </article>
-        </section>
-
-        <section class="lower-grid">
-          <article class="metrics-card panel">
-            <div class="panel-head compact">
-              <div>
-                <span class="section-kicker">TRUTHFUL METRICS</span>
-                <h3>Measured vs simulated</h3>
-              </div>
-            </div>
-            <div class="metric-grid">
-              <div class="metric"><span>Proposal overhead</span><strong id="proposalMetric">—</strong><small>measured composition only</small></div>
-              <div class="metric"><span>Approval → verify</span><strong id="verifyMetric">—</strong><small>measured approval / I/O path</small></div>
-              <div class="metric"><span>Inference</span><strong id="inferenceMetric">Fixture</strong><small id="inferenceTruth">not benchmarked</small></div>
-              <div class="metric"><span>Evidence</span><strong id="evidenceMetric">Pending</strong><small>SHA-256 sealed bundle</small></div>
-            </div>
-          </article>
-
-          <article class="runtime-card panel" id="runtime-section">
-            <div class="panel-head compact">
-              <div>
-                <span class="section-kicker">HARDWARE & RUNTIME</span>
-                <h3>Replaceable inference slots</h3>
-              </div>
-            </div>
-            <div class="runtime-list" id="runtimeList"></div>
-          </article>
-
-          <article class="evidence-card panel" id="evidence-section">
-            <div class="panel-head compact">
-              <div>
-                <span class="section-kicker">FORENSIC REPLAY</span>
-                <h3>Evidence bundle</h3>
-              </div>
-              <button class="mini-btn" id="copyEvidenceBtn" type="button">Copy JSON</button>
-            </div>
-            <pre id="evidencePreview">Run a scenario to generate evidence.</pre>
-          </article>
-        </section>
-
-        <section class="pitch-card panel">
+    <section class="console-grid">
+      <article class="panel camera-panel" id="live-monitor">
+        <div class="panel-head">
           <div>
-            <span class="section-kicker">PITCH CUE</span>
-            <p id="pitchCue"><strong>Physical Guardian does not replace your cameras.</strong> It adds a governed intelligence layer that observes, reasons over time, acts safely, verifies the result, and preserves proof.</p>
+            <span class="section-kicker">SEE</span>
+            <h2>Camera Local Preview</h2>
           </div>
-          <div class="pitch-proof">
-            <span>Existing camera estate</span><b>→</b><span>Replaceable AI runtime</span><b>→</b><span>Governed physical action</span>
-          </div>
-        </section>
+          <span class="status-pill" id="cameraState">Permission required</span>
+        </div>
 
-        <footer>
-          <span>AI Infra Summit Hackathon · Santa Clara · Sep 2026</span>
-          <span>Hackathon composition layer · Pre-existing product provenance disclosed</span>
-        </footer>
-      </main>
-    </div>
-  </div>
+        <div class="preview-shell">
+          <video id="cameraVideo" autoplay muted playsinline></video>
+          <img id="prerecordedPreview" class="hidden" alt="Local prerecorded preview" />
+          <canvas id="captureCanvas" class="hidden" width="1280" height="720"></canvas>
+          <canvas id="overlayCanvas" width="1280" height="720" aria-label="Backend detection overlay"></canvas>
+          <div class="preview-fail" id="previewFail">
+            <strong>LOCAL PREVIEW ONLY</strong>
+            <span id="previewFailText">Camera permission is not active. No inference truth is implied.</span>
+          </div>
+          <div class="preview-label top-left">
+            <strong id="sourceLabel">LAPTOP WEBCAM</strong>
+            <span id="frameId">frame: none</span>
+          </div>
+          <div class="preview-label top-right">
+            <strong>INFERENCE TRUTH</strong>
+            <span id="inferenceFrameTruth">UNVERIFIED</span>
+          </div>
+        </div>
+
+        <div class="camera-controls">
+          <button class="primary-btn" id="startCameraBtn" type="button">Start Local Preview</button>
+          <button class="secondary-btn" id="captureFrameBtn" type="button">Capture Frame For Backend</button>
+          <label class="file-pick hidden" id="filePickLabel">
+            <span>Select local media</span>
+            <input id="mediaFileInput" type="file" accept="image/*,video/*" />
+          </label>
+        </div>
+
+        <div class="boundary-note">
+          <strong>Boundary:</strong>
+          <span>CAMERA PREVIEW != SiMa PROOF. Bounding boxes render only from backend detections tied to this frame/source.</span>
+        </div>
+      </article>
+
+      <article class="panel flow-panel">
+        <div class="panel-head">
+          <div>
+            <span class="section-kicker">PERCEIVE TO PROVE</span>
+            <h2>Guided Demo Flow</h2>
+          </div>
+          <span class="trace-id" id="traceId">No active trace</span>
+        </div>
+
+        <div class="flow" id="pipeline">
+          <div class="stage" data-stage="SEE"><span>01</span><strong>SEE</strong><small>Preview/capture only</small></div>
+          <div class="stage" data-stage="PERCEIVE"><span>02</span><strong>PERCEIVE</strong><small>Awaiting backend detections</small></div>
+          <div class="stage" data-stage="UNDERSTAND"><span>03</span><strong>UNDERSTAND OVER TIME</strong><small>No temporal proof yet</small></div>
+          <div class="stage" data-stage="POLICY"><span>04</span><strong>POLICY</strong><small>Fail-closed until evaluated</small></div>
+          <div class="stage human-stage" data-stage="HUMAN_APPROVAL"><span>05</span><strong>HUMAN APPROVAL</strong><small>Explicit operator boundary</small></div>
+          <div class="stage" data-stage="ACTION"><span>06</span><strong>ACTION</strong><small>Nothing executed</small></div>
+          <div class="stage" data-stage="VERIFY"><span>07</span><strong>VERIFY</strong><small>Readback required</small></div>
+          <div class="stage" data-stage="PROVE"><span>08</span><strong>PROVE</strong><small>Evidence receipt required</small></div>
+        </div>
+
+        <div class="demo-actions">
+          <button class="primary-btn" id="runBtn" type="button">Run Demo Flow</button>
+          <button class="secondary-btn" id="requestInferenceBtn" type="button">Request Frame Inference</button>
+        </div>
+
+        <div class="demo-copy" id="pitchCue">
+          Physical Guardian presents the full governed loop, but stops at UNVERIFIED/BLOCKED when backend or hardware proof is absent.
+        </div>
+      </article>
+
+      <article class="panel approval-panel" id="decision-gate">
+        <div class="panel-head">
+          <div>
+            <span class="section-kicker">POLICY / HUMAN APPROVAL</span>
+            <h2>Action Gate</h2>
+          </div>
+          <span class="policy-badge" id="policyBadge">Fail-closed</span>
+        </div>
+
+        <div class="approval-boundary">
+          <span>HUMAN APPROVAL REQUIRED</span>
+          <strong id="approvalState">NO ACTION PENDING</strong>
+          <small>Approval can authorize execution. It cannot create verification.</small>
+        </div>
+
+        <div class="decision-empty" id="decisionEmpty">
+          <strong>No physical action pending</strong>
+          <p>Guardian will expose a proposed action only after backend policy evaluation. Nothing executes from preview alone.</p>
+        </div>
+
+        <div class="decision-content hidden" id="decisionContent">
+          <span class="decision-label">PROPOSED ACTION</span>
+          <h3 id="actionTitle">Bounded action</h3>
+          <p id="actionReason"></p>
+          <dl class="action-meta">
+            <div><dt>Target</dt><dd id="actionTarget">none</dd></div>
+            <div><dt>Impact</dt><dd id="actionImpact">LOW</dd></div>
+            <div><dt>Backend status</dt><dd id="actionStatus">AWAITING_APPROVAL</dd></div>
+          </dl>
+          <div class="decision-actions">
+            <button class="approve-btn" id="approveBtn" type="button">Approve Request</button>
+            <button class="reject-btn" id="rejectBtn" type="button">Deny</button>
+          </div>
+        </div>
+
+        <div class="lifecycle-panel hidden" id="lifecyclePanel">
+          <span class="decision-label">INTERRUPTIBLE ACTION LIFECYCLE</span>
+          <div class="lifecycle-head">
+            <strong id="lifecycleState">BLOCKED</strong>
+            <small>Resume is fail-closed until safe-state re-verification succeeds.</small>
+          </div>
+          <div class="decision-actions lifecycle-actions">
+            <button class="reject-btn" id="interruptBtn" type="button">Interrupt</button>
+            <button class="approve-btn hidden" id="reverifyBtn" type="button">Re-verify Safe State</button>
+            <button class="approve-btn hidden" id="resumeBtn" type="button">Resume</button>
+            <button class="reject-btn hidden" id="cancelBtn" type="button">Cancel Safely</button>
+          </div>
+          <div class="lifecycle-timeline" id="lifecycleTimeline"></div>
+        </div>
+      </article>
+
+      <article class="panel sima-panel" id="runtime-section">
+        <div class="panel-head">
+          <div>
+            <span class="section-kicker">SiMa MODALIX / MLA</span>
+            <h2>Backend Telemetry Only</h2>
+          </div>
+          <span class="status-pill" id="runtimeBadge">UNVERIFIED</span>
+        </div>
+
+        <div class="telemetry-grid">
+          <div><span>Model</span><strong id="simaModel">Not provided</strong></div>
+          <div><span>Runtime</span><strong id="simaRuntime">Not provided</strong></div>
+          <div><span>Device</span><strong id="simaDevice">Not provided</strong></div>
+          <div><span>Latency</span><strong id="simaLatency">Not provided</strong></div>
+          <div><span>FPS</span><strong id="simaFps">Not provided</strong></div>
+          <div><span>Frame match</span><strong id="frameMatch">UNVERIFIED</strong></div>
+        </div>
+
+        <div class="runtime-list" id="runtimeList"></div>
+
+        <div class="benchmark-box">
+          <span>HISTORICAL BENCHMARK - NOT LIVE TELEMETRY</span>
+          <p id="historicalBenchmark">No historical benchmark supplied by backend.</p>
+        </div>
+      </article>
+
+      <article class="panel evidence-panel" id="evidence-section">
+        <div class="panel-head">
+          <div>
+            <span class="section-kicker">PROVE</span>
+            <h2>Evidence Receipt</h2>
+          </div>
+          <button class="secondary-btn small" id="copyEvidenceBtn" type="button">Copy JSON</button>
+        </div>
+
+        <dl class="receipt-grid" id="receiptGrid">
+          <div><dt>Frame/source</dt><dd id="receiptFrame">UNVERIFIED</dd></div>
+          <div><dt>SiMa truth</dt><dd id="receiptSima">UNVERIFIED</dd></div>
+          <div><dt>Detection summary</dt><dd id="receiptDetections">No backend detections</dd></div>
+          <div><dt>Policy decision</dt><dd id="receiptDecision">No decision</dd></div>
+          <div><dt>Approval state</dt><dd id="receiptApproval">No action pending</dd></div>
+          <div><dt>Physical action</dt><dd id="receiptAction">Nothing executed</dd></div>
+          <div><dt>Verification</dt><dd id="receiptReadback">Not verified</dd></div>
+          <div><dt>Evidence seal</dt><dd id="receiptSeal">Not sealed</dd></div>
+        </dl>
+
+        <details class="raw-json">
+          <summary>Raw backend JSON</summary>
+          <pre id="evidencePreview">No backend evidence yet.</pre>
+        </details>
+      </article>
+    </section>
+  </main>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="/app.js" defer></script>

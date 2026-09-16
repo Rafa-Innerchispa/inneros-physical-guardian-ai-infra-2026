@@ -7,3 +7,4 @@ __pycache__/
 .env
 .env.*
 !.env.example
+.guardian_live_pids.json

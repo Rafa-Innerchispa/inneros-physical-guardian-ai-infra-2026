@@ -161,10 +161,9 @@ def http_checks() -> None:
         required_ui_markers = (
             "Physical Guardian",
             "See. Understand. Decide. Act. Verify. Prove.",
-            'id="sourceSelect"',
-            'id="analyzeBtn"',
+            'id="runBtn"',
             'id="approveBtn"',
-            'id="healthIoState"',
+            'id="ioBadge"',
             'id="evidencePreview"',
         )
         check(all(marker in body for marker in required_ui_markers), "judge WebUI contains critical controls, I/O status and evidence panel")

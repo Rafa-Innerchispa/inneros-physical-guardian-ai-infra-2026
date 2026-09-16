@@ -219,11 +219,11 @@ def test_judge_console_v2_contains_webcam_overlay_truth_and_receipt_contract() -
         'id="receiptFrame"',
         'id="receiptReadback"',
         "HISTORICAL BENCHMARK",
-        "CAMERA PREVIEW ≠ SiMa PROOF",
+        "CAMERA PREVIEW != SiMa PROOF",
     ):
         assert marker in html
     assert "navigator.mediaDevices.getUserMedia" in js
     assert "/api/inference/frame" in js
     assert "/api/inference/source" in js
     assert "frameId !== lastSubmittedFrameId" in js
-    assert "DENIED — NOTHING EXECUTED" in js
+    assert "DENIED - NOTHING EXECUTED" in js

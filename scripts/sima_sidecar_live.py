@@ -61,6 +61,10 @@ def main() -> None:
         ssh_port=args.ssh_port,
         model_archive=args.model_archive,
         model_sha256=args.model_sha256,
+        conf_threshold=0.25,
+        telemetry_confidence_floor=0.002,
+        max_detections=30,
+        timeout_sec=30.0,
     )
     adapter = SimaLiveAdapter(config)
     handler_class = make_sima_sidecar_handler(adapter)
