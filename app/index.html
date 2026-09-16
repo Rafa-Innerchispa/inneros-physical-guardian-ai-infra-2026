@@ -8,37 +8,84 @@
 </head>
 <body>
   <main class="console">
-    <!-- MASTHEAD & ARCHITECTURAL LANES -->
+    <!-- COMPACT MASTHEAD & SYSTEM HEALTH -->
     <header class="masthead">
       <div class="brand-block">
         <div class="brand-top">
           <span class="eyebrow">InnerOS Physical AI Infrastructure • SiMa.ai Onsite Edition</span>
           <span class="status-pill hero-chip" id="truthBadge">HARDWARE LIVE</span>
         </div>
-        <h1>Physical Guardian</h1>
-        <p class="subtitle">See. Understand. Decide. Act. Verify. Prove.</p>
-        <div class="two-lanes-summary">
-          <div class="lane-tag perception-lane">
-            <span class="lane-kicker">LANE A: LIVE PERCEPTION</span>
-            <strong>REAL CAMERA → SiMa MODALIX → MLA → DETECTIONS</strong>
-          </div>
-          <div class="lane-tag governance-lane">
-            <span class="lane-kicker">LANE B: GOVERNED ACTION FLOW</span>
-            <strong>GUARDIAN POLICY → HUMAN APPROVAL → ACTION → VERIFY → EVIDENCE</strong>
-          </div>
+        <div class="brand-headline">
+          <h1>Physical Guardian</h1>
+          <p class="subtitle">See. Understand. Decide. Act. Verify. Prove.</p>
         </div>
       </div>
 
-      <div class="operator-strip">
-        <label class="select-label">
-          <span>Camera Source</span>
-          <select id="sourceSelect">
-            <option value="laptop-webcam">LAPTOP WEBCAM</option>
-            <option value="local-prerecorded">LOCAL PRERECORDED</option>
-          </select>
-        </label>
+      <!-- COMPACT HEALTH STRIP (4 CARDS) -->
+      <section class="health-strip" aria-label="System Health">
+        <div class="health-cell" data-health="camera">
+          <span>CAMERA</span>
+          <strong id="cameraHealth">READY</strong>
+          <small id="cameraTruth">UNVERIFIED</small>
+        </div>
+        <div class="health-cell" data-health="sima">
+          <span>SiMa MODALIX</span>
+          <strong id="simaHealth">READY</strong>
+          <small id="simaTruth">MEASURED</small>
+        </div>
+        <div class="health-cell" data-health="guardian">
+          <span>GUARDIAN</span>
+          <strong id="guardianHealth">READY</strong>
+          <small id="guardianTruth">VERIFIED</small>
+        </div>
+        <div class="health-cell" data-health="evidence">
+          <span>EVIDENCE</span>
+          <strong id="evidenceHealth">READY</strong>
+          <small id="evidenceTruth">SEALED</small>
+        </div>
+        <!-- Hidden health cell for test compatibility -->
+        <div class="health-cell hidden" data-health="mla">
+          <span>MLA RUNTIME</span>
+          <strong id="mlaHealth">READY</strong>
+          <small id="mlaTruth">MEASURED</small>
+        </div>
+      </section>
+    </header>
 
-        <label class="select-label">
+    <!-- SOURCE CARDS & DEMO TRIGGER CONTROL BAR -->
+    <section class="source-control-bar">
+      <div class="source-cards-group">
+        <span class="bar-label">SOURCE:</span>
+        <button type="button" class="src-btn active" id="srcBtnWebcam" data-source="laptop-webcam">
+          <span class="src-icon">💻</span>
+          <div class="src-info">
+            <strong>LAPTOP WEBCAM</strong>
+            <small class="src-status ready">LOCAL HOST • READY</small>
+          </div>
+        </button>
+        <button type="button" class="src-btn" id="srcBtnGyeCh2" data-source="gye-dahua-ch2">
+          <span class="src-icon">🌐</span>
+          <div class="src-info">
+            <strong>GYE DAHUA CH2</strong>
+            <small class="src-status gye" id="gyeCh2Status">GUAYAQUIL • READY</small>
+          </div>
+        </button>
+        <button type="button" class="src-btn" id="srcBtnGyeCh3" data-source="gye-dahua-ch3">
+          <span class="src-icon">🌐</span>
+          <div class="src-info">
+            <strong>GYE DAHUA CH3</strong>
+            <small class="src-status gye" id="gyeCh3Status">GUAYAQUIL • READY</small>
+          </div>
+        </button>
+        <!-- Retained select for contract & custom sources -->
+        <select id="sourceSelect" class="hidden-select" aria-label="Camera source select">
+          <option value="laptop-webcam">LAPTOP WEBCAM</option>
+          <option value="local-prerecorded">LOCAL PRERECORDED</option>
+        </select>
+      </div>
+
+      <div class="action-trigger-group">
+        <label class="scenario-label">
           <span>REFERENCE POLICY SCENARIO</span>
           <select id="scenarioSelect">
             <option value="loitering_after_hours">LOITERING AFTER HOURS (REFERENCE)</option>
@@ -47,132 +94,39 @@
           </select>
         </label>
 
-        <label class="select-label">
-          <span>GUARDIAN FLOW MODE</span>
-          <select id="runtimeSelect"></select>
-          <small class="selector-help">Camera inference uses real SiMa Modalix through the live inference path.</small>
-        </label>
-
+        <button class="hero-primary-btn" id="runLiveDemoBtn" type="button">⚡ RUN LIVE SiMa DEMO</button>
         <button class="secondary-btn" id="resetBtn" type="button">Reset</button>
       </div>
-    </header>
-
-    <!-- SYSTEM HEALTH STRIP WITH TRUTH LEGEND -->
-    <section class="health-strip" aria-label="System Health">
-      <div class="health-cell" data-health="camera">
-        <span>CAMERA INPUT</span>
-        <strong id="cameraHealth">READY</strong>
-        <small id="cameraTruth">UNVERIFIED</small>
-      </div>
-      <div class="health-cell" data-health="sima">
-        <span>SiMa MODALIX</span>
-        <strong id="simaHealth">READY</strong>
-        <small id="simaTruth">MEASURED</small>
-      </div>
-      <div class="health-cell" data-health="mla">
-        <span>MLA RUNTIME</span>
-        <strong id="mlaHealth">READY</strong>
-        <small id="mlaTruth">MEASURED</small>
-      </div>
-      <div class="health-cell" data-health="guardian">
-        <span>GUARDIAN ENGINE</span>
-        <strong id="guardianHealth">READY</strong>
-        <small id="guardianTruth">VERIFIED</small>
-      </div>
-      <div class="health-cell" data-health="io" id="ioBadge">
-        <span>PHYSICAL I/O</span>
-        <strong id="ioHealth">BLOCKED</strong>
-        <small id="ioTruth">SAFELY BLOCKED (NO RELAY)</small>
-      </div>
-      <div class="health-cell" data-health="evidence">
-        <span>EVIDENCE SEAL</span>
-        <strong id="evidenceHealth">READY</strong>
-        <small id="evidenceTruth">SEALED</small>
-      </div>
     </section>
 
-    <!-- STATUS LEGEND -->
-    <div class="status-legend-bar">
-      <span><strong>TRUTH LEGEND:</strong></span>
-      <span class="legend-item"><strong class="chip-measured">MEASURED</strong> Current hardware/runtime evidence</span>
-      <span class="legend-item"><strong class="chip-reference">REFERENCE</strong> Governed demo policy context</span>
-      <span class="legend-item"><strong class="chip-blocked">BLOCKED</strong> Intentionally prevented (no unverified claims)</span>
-      <span class="legend-item"><strong class="chip-unverified">UNVERIFIED</strong> Awaiting backend cryptographic seal</span>
-    </div>
-
-    <!-- PRIMARY HERO CTA BAR -->
-    <section class="primary-hero-bar">
-      <div class="hero-cta-info">
-        <span class="section-kicker">ONE-CLICK JUDGE EVALUATION</span>
-        <h2 id="heroActionTitle">Run Live SiMa.ai Modalix Perception Demo</h2>
-        <p id="heroActionDesc">Captures live frame from selected camera, runs MLSoC inference on SiMa DevKit EV74 (~31ms), and applies Guardian safety governance.</p>
-      </div>
-      <div class="hero-cta-actions">
-        <button class="hero-primary-btn" id="runLiveDemoBtn" type="button">⚡ RUN LIVE SiMa DEMO</button>
-      </div>
-    </section>
-
-    <!-- REAL HARDWARE HERO PROOF CARD (ACTIVE ON INFERENCE) -->
-    <section class="hardware-proof-card" id="hardwareHeroCard">
-      <div class="proof-card-head">
-        <div class="proof-title-group">
-          <span class="proof-badge">REAL HARDWARE PROOF</span>
-          <h3>SiMa.ai Modalix DevKit MLSoC (EV74 aarch64)</h3>
-        </div>
-        <span class="proof-runtime-pill" id="heroRuntimePill">PyNeat 0.4.0 / SiMa MLA • MEASURED</span>
-      </div>
-      <div class="proof-grid">
-        <div class="proof-cell">
-          <span class="proof-label">CAMERA SOURCE</span>
-          <strong id="heroProofSource">LAPTOP WEBCAM</strong>
-          <small id="heroProofLocation">Local San Francisco Host</small>
-        </div>
-        <div class="proof-cell">
-          <span class="proof-label">DEVICE & CHIP</span>
-          <strong id="heroProofDevice">SiMa.ai Modalix EV74</strong>
-          <small>Embedded MLSoC Target (192.168.1.20)</small>
-        </div>
-        <div class="proof-cell">
-          <span class="proof-label">MODEL & RUNTIME</span>
-          <strong id="heroProofModel">YOLO26m (BF16-B1)</strong>
-          <small>PyNeat 0.4.0 MLA Anchor-Free</small>
-        </div>
-        <div class="proof-cell">
-          <span class="proof-label">CHIP LATENCY</span>
-          <strong class="highlight-stat" id="heroProofLatency">31.36 ms</strong>
-          <small id="heroProofFps">~31.8 FPS MLSoC throughput</small>
-        </div>
-        <div class="proof-cell">
-          <span class="proof-label">DETECTIONS</span>
-          <strong class="highlight-stat" id="heroProofDetections">0 Objects</strong>
-          <small id="heroProofClasses">COCO80 Verified Classes</small>
-        </div>
-        <div class="proof-cell">
-          <span class="proof-label">HARDWARE ATTESTATION</span>
-          <strong class="provenance-chip" id="heroProofAttestation">MEASURED / MATCHED</strong>
-          <small id="heroProofTensors">10/10 MLSoC Tensors Decoded</small>
-        </div>
-      </div>
-    </section>
-
-    <!-- MAIN TWO-COLUMN WORKSPACE -->
-    <section class="grid-layout">
-      <!-- PANEL 1: SEE & PERCEIVE (CAMERA & MODALIX OVERLAY) -->
-      <article class="panel camera-panel" id="camera-section">
-        <div class="panel-head">
-          <div>
-            <span class="section-kicker">LANE A: LIVE PERCEPTION</span>
-            <h2>Camera Feed & SiMa Overlays</h2>
+    <!-- MAIN 60 / 40 WORKSPACE GRID -->
+    <section class="main-workspace-grid">
+      <!-- LEFT COLUMN (60%): CAMERA / LIVE VIEW -->
+      <article class="camera-workspace-card" id="camera-section">
+        <div class="card-head">
+          <div class="card-title-group">
+            <span class="section-kicker">LIVE PERCEPTION FEED</span>
+            <h2 id="cameraHeading">LAPTOP WEBCAM • LIVE PREVIEW</h2>
           </div>
-          <span class="status-pill" id="cameraState">Ready</span>
+          
+          <div class="overlay-filter-group">
+            <span class="filter-label">OVERLAY:</span>
+            <button type="button" class="filter-btn active" id="filterPolicyRelevant">
+              Policy Relevant (<span id="policyCount">0</span>)
+            </button>
+            <button type="button" class="filter-btn" id="filterAllDetections">
+              All Detections (<span id="totalCount">0</span>)
+            </button>
+            <span class="status-pill" id="cameraState">Ready</span>
+          </div>
         </div>
 
         <!-- REMOTE PROVENANCE BANNER (WHEN GYE CH2/CH3 SELECTED) -->
         <div class="remote-infra-banner hidden" id="remoteInfraBanner">
           <div class="infra-dot pulse"></div>
           <div class="infra-details">
-            <strong>GUAYAQUIL, ECUADOR (PC DOCTOR LAB) → SAN FRANCISCO MODALIX</strong>
-            <p>Live Dahua DVR camera stream processed across private Tailscale mesh (AMD .5 node $\rightarrow$ SF host $\rightarrow$ SiMa DevKit EV74).</p>
+            <strong>GUAYAQUIL, ECUADOR (PC DOCTOR LAB) → SAN FRANCISCO HOST → SiMa MODALIX → GUARDIAN</strong>
+            <p>Live Dahua DVR stream routed securely over private Tailscale tunnel (AMD .5 node → SF host → SiMa DevKit EV74 MLSoC).</p>
           </div>
         </div>
 
@@ -183,7 +137,7 @@
           <canvas id="overlayCanvas" width="1280" height="720" aria-label="Backend detection overlay"></canvas>
           <div class="preview-fail" id="previewFail">
             <strong id="previewFailTitle">LOCAL PREVIEW READY</strong>
-            <span id="previewFailText">Click 'RUN LIVE SiMa DEMO' to capture and infer through the Modalix DevKit.</span>
+            <span id="previewFailText">Click '⚡ RUN LIVE SiMa DEMO' to capture and infer through the Modalix DevKit.</span>
           </div>
           <div class="preview-label top-left">
             <strong id="sourceLabel">LAPTOP WEBCAM</strong>
@@ -195,162 +149,228 @@
           </div>
         </div>
 
-        <!-- ADVANCED / MANUAL CONTROLS ACCORDION -->
-        <details class="advanced-controls" id="advancedControlsDrawer">
-          <summary><span>⚙ Advanced / Manual Controls</span></summary>
-          <div class="camera-controls">
-            <button class="primary-btn" id="startCameraBtn" type="button">START CAMERA</button>
-            <button class="secondary-btn" id="captureFrameBtn" type="button">CAPTURE FRAME</button>
-            <button class="secondary-btn" id="requestInferenceBtn" type="button">RUN REAL SiMa INFERENCE</button>
-            <label class="file-pick hidden" id="filePickLabel">
-              <span>Select local media</span>
-              <input id="mediaFileInput" type="file" accept="image/*,video/*" />
-            </label>
+        <div class="camera-footer-strip">
+          <div class="boundary-note">
+            <strong>Boundary:</strong>
+            <span>CAMERA PREVIEW != SiMa PROOF. Bounding boxes render only from backend detections tied to this frame/source.</span>
           </div>
-        </details>
-
-        <div class="boundary-note">
-          <strong>Boundary:</strong>
-          <span>CAMERA PREVIEW != SiMa PROOF. Bounding boxes render only from backend detections tied to this frame/source.</span>
+          <!-- MANUAL CONTROLS ACCORDION -->
+          <details class="advanced-controls" id="advancedControlsDrawer">
+            <summary><span>⚙ Manual Controls</span></summary>
+            <div class="camera-controls">
+              <button class="primary-btn small" id="startCameraBtn" type="button">START CAMERA</button>
+              <button class="secondary-btn small" id="captureFrameBtn" type="button">CAPTURE FRAME</button>
+              <button class="secondary-btn small" id="requestInferenceBtn" type="button">RUN SiMa INFERENCE</button>
+              <label class="file-pick hidden" id="filePickLabel">
+                <span>Select file</span>
+                <input id="mediaFileInput" type="file" accept="image/*,video/*" />
+              </label>
+            </div>
+          </details>
         </div>
       </article>
 
-      <!-- PANEL 2: GOVERNED ACTION FLOW & POLICY PIPELINE -->
-      <article class="panel flow-panel">
-        <div class="panel-head">
-          <div>
-            <span class="section-kicker">LANE B: GOVERNED ACTION FLOW</span>
-            <h2>Perceive to Prove Pipeline</h2>
+      <!-- RIGHT COLUMN (40%): HARDWARE PROOF + GUARDIAN ACTION GATE + EVIDENCE SUMMARY -->
+      <aside class="right-stack-column">
+        <!-- 1. REAL HARDWARE PROOF CARD (COMPACT 2-ROW) -->
+        <article class="hero-proof-card" id="hardwareHeroCard">
+          <div class="card-head-compact">
+            <span class="proof-badge">REAL HARDWARE PROOF</span>
+            <span class="provenance-chip" id="heroProofAttestation">MEASURED / MATCHED</span>
           </div>
-          <span class="trace-id" id="traceId">No active trace</span>
-        </div>
-
-        <div class="flow" id="pipeline">
-          <div class="stage" data-stage="SEE"><span>01</span><strong>SEE</strong><small>Preview/capture only</small></div>
-          <div class="stage" data-stage="PERCEIVE"><span>02</span><strong>PERCEIVE</strong><small>SiMa MLSoC Inference</small></div>
-          <div class="stage" data-stage="UNDERSTAND"><span>03</span><strong>POLICY CONTEXT</strong><small>Applied to verified perception</small></div>
-          <div class="stage" data-stage="POLICY"><span>04</span><strong>POLICY</strong><small>Fail-closed evaluation</small></div>
-          <div class="stage human-stage" data-stage="HUMAN_APPROVAL"><span>05</span><strong>HUMAN APPROVAL</strong><small>Explicit operator boundary</small></div>
-          <div class="stage" data-stage="ACTION"><span>06</span><strong>ACTION</strong><small>Nothing executed</small></div>
-          <div class="stage" data-stage="VERIFY"><span>07</span><strong>VERIFY</strong><small>Readback required</small></div>
-          <div class="stage" data-stage="PROVE"><span>08</span><strong>PROVE</strong><small>Evidence receipt required</small></div>
-        </div>
-
-        <div class="demo-actions">
-          <button class="primary-btn" id="runBtn" type="button">Run Governed Reference Flow</button>
-        </div>
-
-        <div class="demo-copy" id="pitchCue">
-          Physical Guardian presents the full governed loop, but stops at UNVERIFIED/BLOCKED when backend or hardware proof is absent.
-        </div>
-      </article>
-
-      <!-- PANEL 3: ACTION GATE & HUMAN APPROVAL -->
-      <article class="panel approval-panel" id="decision-gate">
-        <div class="panel-head">
-          <div>
-            <span class="section-kicker">POLICY / HUMAN APPROVAL</span>
-            <h2>Action Gate</h2>
+          <div class="proof-compact-grid">
+            <div class="proof-item">
+              <span class="lbl">DEVICE</span>
+              <strong id="heroProofDevice">SiMa.ai Modalix EV74</strong>
+              <small>Embedded MLSoC (192.168.1.20)</small>
+            </div>
+            <div class="proof-item">
+              <span class="lbl">RUNTIME</span>
+              <strong id="heroProofModel">YOLO26m • PyNeat 0.4.0</strong>
+              <small id="heroProofFps">MLA Anchor-Free • 31.8 FPS</small>
+            </div>
+            <div class="proof-item">
+              <span class="lbl">LATENCY</span>
+              <strong class="highlight-val" id="heroProofLatency">31.36 ms</strong>
+              <small>Live measured</small>
+            </div>
+            <div class="proof-item">
+              <span class="lbl">DETECTIONS</span>
+              <strong class="highlight-val" id="heroProofDetections">0 Objects</strong>
+              <small id="heroProofClasses">COCO80 Classes</small>
+            </div>
           </div>
-          <span class="policy-badge" id="policyBadge">Fail-closed</span>
-        </div>
+        </article>
 
-        <div class="approval-boundary">
-          <span id="approvalBoundaryKicker">WAITING FOR POLICY DECISION</span>
-          <strong id="approvalState">NO ACTION PENDING</strong>
-          <small>Approval authorizes execution. Physical verification requires real readback.</small>
-        </div>
-
-        <div class="decision-empty" id="decisionEmpty">
-          <strong id="decisionEmptyTitle">No physical action pending</strong>
-          <p id="decisionEmptyDesc">Guardian will expose a proposed action only after backend policy evaluation. Nothing executes from preview alone.</p>
-        </div>
-
-        <div class="decision-content hidden" id="decisionContent">
-          <span class="decision-label">PROPOSED ACTION</span>
-          <h3 id="actionTitle">Bounded action</h3>
-          <p id="actionReason"></p>
-          <dl class="action-meta">
-            <div><dt>Target</dt><dd id="actionTarget">none</dd></div>
-            <div><dt>Impact</dt><dd id="actionImpact">LOW</dd></div>
-            <div><dt>Backend status</dt><dd id="actionStatus">AWAITING_APPROVAL</dd></div>
-          </dl>
-          <div class="decision-actions">
-            <button class="approve-btn" id="approveBtn" type="button">Approve Request</button>
-            <button class="reject-btn" id="rejectBtn" type="button">Deny</button>
+        <!-- 2. GUARDIAN DECISION & ACTION GATE -->
+        <article class="action-gate-card" id="decision-gate">
+          <div class="card-head-compact">
+            <div class="gate-title-group">
+              <span class="section-kicker">SAFETY GOVERNANCE</span>
+              <h3>Guardian Action Gate</h3>
+            </div>
+            <span class="policy-badge" id="policyBadge">Fail-closed</span>
           </div>
-        </div>
 
-        <div class="lifecycle-panel hidden" id="lifecyclePanel">
-          <span class="decision-label">INTERRUPTIBLE ACTION LIFECYCLE</span>
-          <div class="lifecycle-head">
-            <strong id="lifecycleState">BLOCKED</strong>
-            <small>Resume is fail-closed until safe-state re-verification succeeds.</small>
+          <div class="approval-boundary-compact">
+            <div class="boundary-header">
+              <span id="approvalBoundaryKicker">WAITING FOR POLICY DECISION</span>
+              <strong id="approvalState">NO ACTION PENDING</strong>
+            </div>
+            <small class="boundary-sub">Approval authorizes execution. Physical verification requires real readback.</small>
           </div>
-          <div class="decision-actions lifecycle-actions">
-            <button class="reject-btn" id="interruptBtn" type="button">Interrupt</button>
-            <button class="approve-btn hidden" id="reverifyBtn" type="button">Re-verify Safe State</button>
-            <button class="approve-btn hidden" id="resumeBtn" type="button">Resume</button>
-            <button class="reject-btn hidden" id="cancelBtn" type="button">Cancel Safely</button>
+
+          <!-- DECISION CONTENT (AWAITING APPROVAL) -->
+          <div class="decision-content hidden" id="decisionContent">
+            <div class="proposed-action-box">
+              <div class="proposed-header">
+                <span class="decision-label">PROPOSED ACTION:</span>
+                <strong id="actionTitle">Bounded action</strong>
+              </div>
+              <p id="actionReason">High-impact safety gate awaiting operator review.</p>
+              <div class="action-meta-compact">
+                <span>Target: <strong id="actionTarget">none</strong></span>
+                <span>Impact: <strong id="actionImpact">LOW</strong></span>
+                <span>Status: <strong id="actionStatus">AWAITING_APPROVAL</strong></span>
+              </div>
+            </div>
+            <div class="decision-hero-actions">
+              <button class="approve-btn" id="approveBtn" type="button">✔ APPROVE REQUEST</button>
+              <button class="reject-btn" id="rejectBtn" type="button">✖ DENY</button>
+            </div>
           </div>
-          <div class="lifecycle-timeline" id="lifecycleTimeline"></div>
-        </div>
-      </article>
 
-      <!-- PANEL 4: SiMa MODALIX TELEMETRY DETAILS -->
-      <article class="panel sima-panel" id="runtime-section">
-        <div class="panel-head">
-          <div>
-            <span class="section-kicker">SiMa MODALIX / MLA</span>
-            <h2>Hardware Telemetry & Runtime Slots</h2>
+          <!-- DECISION EMPTY (NO ACTION OR SAFE NO-OP) -->
+          <div class="decision-empty" id="decisionEmpty">
+            <strong id="decisionEmptyTitle">No physical action pending</strong>
+            <p id="decisionEmptyDesc">Guardian will expose a proposed action only after backend policy evaluation. Nothing executes from preview alone.</p>
           </div>
-          <span class="status-pill" id="runtimeBadge">MEASURED</span>
-        </div>
 
-        <div class="telemetry-grid">
-          <div><span>Model</span><strong id="simaModel">yolo26m-seg-bf16-b1</strong></div>
-          <div><span>Runtime</span><strong id="simaRuntime">PyNeat 0.4.0 / SiMa MLA</strong></div>
-          <div><span>Device</span><strong id="simaDevice">SiMa.ai Modalix DevKit</strong></div>
-          <div><span>Latency</span><strong id="simaLatency">~31.36 ms</strong></div>
-          <div><span>FPS</span><strong id="simaFps">~31.8</strong></div>
-          <div><span>Frame match</span><strong id="frameMatch">MATCHED</strong></div>
-        </div>
-
-        <div class="runtime-list" id="runtimeList"></div>
-
-        <details class="benchmark-box">
-          <summary><span>HISTORICAL BENCHMARK (REFERENCE)</span></summary>
-          <p id="historicalBenchmark">No historical benchmark supplied by backend.</p>
-        </details>
-      </article>
-
-      <!-- PANEL 5: EVIDENCE RECEIPT -->
-      <article class="panel evidence-panel" id="evidence-section">
-        <div class="panel-head">
-          <div>
-            <span class="section-kicker">PROVE</span>
-            <h2>Evidence Receipt</h2>
+          <!-- SECONDARY REFERENCE DEMO ACTION -->
+          <div class="gate-secondary-bar">
+            <button class="governed-ref-btn" id="runBtn" type="button">
+              ▶ Run Governed Reference Flow <span class="badge-ref">REFERENCE</span>
+            </button>
+            <div class="io-status-chip" id="ioBadge">
+              <span class="io-dot blocked"></span>
+              <span>Physical I/O: <strong id="ioHealth">SAFELY BLOCKED</strong></span>
+            </div>
           </div>
-          <button class="secondary-btn small" id="copyEvidenceBtn" type="button">Copy JSON</button>
-        </div>
 
-        <dl class="receipt-grid" id="receiptGrid">
-          <div><dt>Frame/source</dt><dd id="receiptFrame">UNVERIFIED</dd></div>
-          <div><dt>SiMa truth</dt><dd id="receiptSima">MEASURED</dd></div>
-          <div><dt>Detection summary</dt><dd id="receiptDetections">No backend detections</dd></div>
-          <div><dt>Policy decision</dt><dd id="receiptDecision">No decision</dd></div>
-          <div><dt>Approval state</dt><dd id="receiptApproval">No action pending</dd></div>
-          <div><dt>Physical action</dt><dd id="receiptAction">Nothing executed</dd></div>
-          <div><dt>Verification</dt><dd id="receiptReadback">Not verified</dd></div>
-          <div><dt>Evidence seal</dt><dd id="receiptSeal">Not sealed</dd></div>
-        </dl>
+          <!-- LIFECYCLE SUMMARY / ACCORDION -->
+          <div class="lifecycle-panel hidden" id="lifecyclePanel">
+            <div class="lifecycle-head-row">
+              <span>LIFECYCLE STATE:</span>
+              <strong id="lifecycleState">BLOCKED</strong>
+            </div>
+            <small class="lifecycle-sub">Resume is fail-closed until safe-state re-verification succeeds.</small>
+            <div class="decision-actions lifecycle-actions">
+              <button class="reject-btn small" id="interruptBtn" type="button">Interrupt</button>
+              <button class="approve-btn small hidden" id="reverifyBtn" type="button">Re-verify Safe State</button>
+              <button class="approve-btn small hidden" id="resumeBtn" type="button">Resume</button>
+              <button class="reject-btn small hidden" id="cancelBtn" type="button">Cancel Safely</button>
+            </div>
+            <div class="lifecycle-timeline" id="lifecycleTimeline"></div>
+          </div>
+        </article>
 
-        <details class="raw-json">
-          <summary>Raw backend JSON</summary>
-          <pre id="evidencePreview">No backend evidence yet.</pre>
-        </details>
-      </article>
+        <!-- 3. EVIDENCE SUMMARY RECEIPT -->
+        <article class="evidence-summary-card" id="evidence-section">
+          <div class="card-head-compact">
+            <div class="gate-title-group">
+              <span class="section-kicker">PROVE</span>
+              <h3>Evidence Receipt</h3>
+            </div>
+            <button class="secondary-btn small" id="copyEvidenceBtn" type="button">Copy JSON</button>
+          </div>
+
+          <div class="receipt-table" id="receiptGrid">
+            <div class="r-row"><span class="r-k">Frame / Source:</span><strong class="r-v" id="receiptFrame">UNVERIFIED</strong></div>
+            <div class="r-row"><span class="r-k">SiMa Truth:</span><strong class="r-v chip-measured" id="receiptSima">MEASURED</strong></div>
+            <div class="r-row"><span class="r-k">Detections:</span><strong class="r-v" id="receiptDetections">No backend detections</strong></div>
+            <div class="r-row"><span class="r-k">Policy Decision:</span><strong class="r-v" id="receiptDecision">No decision</strong></div>
+            <div class="r-row"><span class="r-k">Approval State:</span><strong class="r-v" id="receiptApproval">No action pending</strong></div>
+            <div class="r-row"><span class="r-k">Physical Action:</span><strong class="r-v" id="receiptAction">Nothing executed</strong></div>
+            <div class="r-row"><span class="r-k">Verification:</span><strong class="r-v chip-blocked" id="receiptReadback">Not verified</strong></div>
+            <div class="r-row"><span class="r-k">Evidence Seal:</span><strong class="r-v" id="receiptSeal">Not sealed</strong></div>
+          </div>
+
+          <div class="evidence-card-footer">
+            <a href="#advancedProof" class="json-link">View Full Raw Backend JSON ▼</a>
+          </div>
+        </article>
+      </aside>
     </section>
+
+    <!-- ADVANCED TECHNICAL PROOF DRAWER (BELOW THE FOLD) -->
+    <details class="advanced-proof-accordion" id="advancedProof">
+      <summary class="advanced-summary">
+        <span>🔍 ADVANCED TECHNICAL PROOF & ENGINE DIAGNOSTICS</span>
+        <span class="summary-sub">8-Stage Pipeline • Full Telemetry • JSON Evidence • Truth Legend</span>
+      </summary>
+
+      <div class="advanced-body">
+        <!-- 8-STAGE PIPELINE -->
+        <div class="advanced-sub-card">
+          <h4>GOVERNED PIPELINE (8 STAGES)</h4>
+          <span class="trace-id" id="traceId">No active trace</span>
+          <div class="flow" id="pipeline">
+            <div class="stage" data-stage="SEE"><span>01</span><strong>SEE</strong><small>Preview/capture</small></div>
+            <div class="stage" data-stage="PERCEIVE"><span>02</span><strong>PERCEIVE</strong><small>SiMa MLSoC</small></div>
+            <div class="stage" data-stage="UNDERSTAND"><span>03</span><strong>POLICY CONTEXT</strong><small>Applied to perception</small></div>
+            <div class="stage" data-stage="POLICY"><span>04</span><strong>POLICY</strong><small>Fail-closed</small></div>
+            <div class="stage human-stage" data-stage="HUMAN_APPROVAL"><span>05</span><strong>HUMAN APPROVAL</strong><small>Operator boundary</small></div>
+            <div class="stage" data-stage="ACTION"><span>06</span><strong>ACTION</strong><small>Nothing executed</small></div>
+            <div class="stage" data-stage="VERIFY"><span>07</span><strong>VERIFY</strong><small>Readback required</small></div>
+            <div class="stage" data-stage="PROVE"><span>08</span><strong>PROVE</strong><small>Evidence seal</small></div>
+          </div>
+          <p class="demo-copy" id="pitchCue">
+            Physical Guardian presents the full governed loop, but stops at UNVERIFIED/BLOCKED when backend or hardware proof is absent.
+          </p>
+        </div>
+
+        <!-- FULL TELEMETRY & RUNTIME -->
+        <div class="advanced-sub-card" id="runtime-section">
+          <h4>SiMa MODALIX / MLA DETAILED TELEMETRY</h4>
+          <div class="telemetry-grid">
+            <div><span>Model</span><strong id="simaModel">yolo26m-seg-bf16-b1</strong></div>
+            <div><span>Runtime</span><strong id="simaRuntime">PyNeat 0.4.0 / SiMa MLA</strong></div>
+            <div><span>Device</span><strong id="simaDevice">SiMa.ai Modalix DevKit</strong></div>
+            <div><span>Latency</span><strong id="simaLatency">~31.36 ms</strong></div>
+            <div><span>FPS</span><strong id="simaFps">~31.8</strong></div>
+            <div><span>Frame match</span><strong id="frameMatch">MATCHED</strong></div>
+          </div>
+
+          <label class="select-label advanced-select">
+            <span>GUARDIAN FLOW MODE</span>
+            <select id="runtimeSelect"></select>
+            <small class="selector-help">Camera inference uses real SiMa Modalix through the live inference path.</small>
+          </label>
+
+          <div class="runtime-list" id="runtimeList"></div>
+
+          <details class="benchmark-box">
+            <summary><span>HISTORICAL BENCHMARK (REFERENCE)</span></summary>
+            <p id="historicalBenchmark">No historical benchmark supplied by backend.</p>
+          </details>
+        </div>
+
+        <!-- RAW BACKEND EVIDENCE JSON -->
+        <div class="advanced-sub-card">
+          <h4>RAW BACKEND EVIDENCE JSON</h4>
+          <pre id="evidencePreview">No backend evidence yet.</pre>
+        </div>
+
+        <!-- TRUTH LEGEND -->
+        <div class="status-legend-bar">
+          <span><strong>TRUTH LEGEND:</strong></span>
+          <span class="legend-item"><strong class="chip-measured">MEASURED</strong> Current hardware/runtime evidence</span>
+          <span class="legend-item"><strong class="chip-reference">REFERENCE</strong> Governed demo policy context</span>
+          <span class="legend-item"><strong class="chip-blocked">BLOCKED</strong> Intentionally prevented (no unverified claims)</span>
+          <span class="legend-item"><strong class="chip-unverified">UNVERIFIED</strong> Awaiting backend cryptographic seal</span>
+        </div>
+      </div>
+    </details>
   </main>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
