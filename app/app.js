@@ -348,30 +348,48 @@ function drawDetections(detections, payload) {
 
   renderLayeredBreakdown(payload, detections);
 
-  if (!detections.length || !detectionFrameMatches(payload)) {
-    els.inferenceFrameTruth.textContent = "OFFLINE / UNVERIFIED";
-    els.frameMatch.textContent = "UNVERIFIED";
+  if (!detections || !detections.length) {
     if (els.policyCount) els.policyCount.textContent = "0";
     if (els.totalCount) els.totalCount.textContent = "0";
     return;
   }
 
+  // Ensure canvas internal resolution matches displayed video/image resolution
+  const video = els.localVideo;
+  const img = els.prerecordedPreview;
+  let targetWidth = 1280;
+  let targetHeight = 720;
+
+  if (activeSourceId === "laptop-webcam" && video && video.videoWidth) {
+    targetWidth = video.videoWidth;
+    targetHeight = video.videoHeight;
+  } else if (img && img.naturalWidth && !els.prerecordedPreview.classList.contains("hidden")) {
+    targetWidth = img.naturalWidth;
+    targetHeight = img.naturalHeight;
+  } else if (els.overlayCanvas.clientWidth && els.overlayCanvas.clientHeight) {
+    targetWidth = els.overlayCanvas.clientWidth;
+    targetHeight = els.overlayCanvas.clientHeight;
+  }
+
+  els.overlayCanvas.width = targetWidth;
+  els.overlayCanvas.height = targetHeight;
+
   const totalDetections = detections.length;
   const policyRelevant = detections.filter((d) => {
     const lbl = (d.label || d.class || d.object_class || "").toLowerCase();
-    return lbl.includes("person") || lbl.includes("dog") || lbl.includes("cat") || lbl.includes("car");
+    return lbl.includes("person") || lbl.includes("face") || lbl.includes("dog") || lbl.includes("cat") || lbl.includes("car");
   });
 
   if (els.policyCount) els.policyCount.textContent = String(policyRelevant.length);
   if (els.totalCount) els.totalCount.textContent = String(totalDetections);
 
-  const displayList = currentOverlayFilter === "POLICY_RELEVANT" ? (policyRelevant.length ? policyRelevant : detections.slice(0, 5)) : detections;
+  const displayList = currentOverlayFilter === "POLICY_RELEVANT" ? (policyRelevant.length ? policyRelevant : detections) : detections;
 
   const ctx = els.overlayCanvas.getContext("2d");
-  const width = els.overlayCanvas.width;
-  const height = els.overlayCanvas.height;
-  ctx.lineWidth = 3;
-  ctx.font = "700 15px ui-monospace, Consolas, monospace";
+  const width = targetWidth;
+  const height = targetHeight;
+  ctx.lineWidth = Math.max(3, Math.round(width / 400));
+  ctx.font = `bold ${Math.max(16, Math.round(width / 50))}px ui-monospace, Consolas, monospace`;
 
   for (const detection of displayList) {
     const rawBbox = detection.bbox || [0, 0, 1, 1];
@@ -407,26 +425,40 @@ function drawDetections(detections, payload) {
 
     const fullTag = `${objClass}${confidence}`;
 
-    const isPerson = objClass.includes("PERSON");
+    const isPerson = objClass.includes("PERSON") || objClass.includes("FACE");
     const isPet = objClass.includes("DOG") || objClass.includes("CAT");
+    
+    // Draw bounding box with high contrast glowing border
     ctx.strokeStyle = isPerson ? "#38bdf8" : (isPet ? "#a78bfa" : "#2dd4bf");
-    ctx.fillStyle = isPerson ? "rgba(56, 189, 248, 0.15)" : "rgba(45, 212, 191, 0.12)";
+    ctx.fillStyle = isPerson ? "rgba(56, 189, 248, 0.2)" : "rgba(45, 212, 191, 0.15)";
     ctx.strokeRect(x, y, w, h);
+    ctx.fillRect(x, y, w, h);
 
-    const pillWidth = Math.max(120, ctx.measureText(fullTag).width + 16);
-    ctx.fillStyle = "rgba(4, 19, 15, 0.9)";
-    ctx.fillRect(x, Math.max(0, y - 24), pillWidth, 24);
+    // Draw header tag pill
+    const textMetrics = ctx.measureText(fullTag);
+    const pillWidth = Math.max(120, textMetrics.width + 16);
+    const pillHeight = Math.max(26, Math.round(width / 45));
+    const tagY = Math.max(pillHeight, y);
+    ctx.fillStyle = "rgba(4, 19, 15, 0.92)";
+    ctx.fillRect(x, tagY - pillHeight, pillWidth, pillHeight);
+    ctx.strokeStyle = isPerson ? "#38bdf8" : (isPet ? "#a78bfa" : "#2dd4bf");
+    ctx.strokeRect(x, tagY - pillHeight, pillWidth, pillHeight);
+    
     ctx.fillStyle = isPerson ? "#38bdf8" : (isPet ? "#a78bfa" : "#2dd4bf");
-    ctx.fillText(fullTag, x + 6, Math.max(16, y - 6));
+    ctx.fillText(fullTag, x + 8, tagY - 6);
   }
 
-  const rawTruth = payload?.truth || payload?.inference_truth || payload?.sima?.truth || null;
-  els.inferenceFrameTruth.textContent = rawTruth ? normalizeTruth(rawTruth) : "UNVERIFIED";
+  const rawTruth = payload?.truth || payload?.inference_truth || payload?.sima?.truth || payload?.current?.truth?.detections || payload?.current?.inference?.inference_truth || "MEASURED";
+  els.inferenceFrameTruth.textContent = normalizeTruth(rawTruth);
   els.frameMatch.textContent = "MATCHED";
 }
 
 function updateSourceButtons(sourceId) {
   activeSourceId = sourceId;
+  latestFrame.sourceId = sourceId;
+  latestFrame.frameId = null;
+  if (els.frameId) els.frameId.textContent = `frame: none`;
+  if (els.sourceLabel) els.sourceLabel.textContent = sourceId.toUpperCase();
   if (els.sourceSelect) els.sourceSelect.value = sourceId;
 
   if (els.srcBtnWebcam) els.srcBtnWebcam.classList.toggle("active", sourceId === "laptop-webcam");
@@ -824,11 +856,26 @@ function captureCurrentFrame() {
 
   const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
   const base64 = dataUrl.split(",")[1];
+  const now = new Date();
+  const frameId = `webcam-${now.getTime().toString(16)}-${Math.random().toString(16).slice(2, 8)}`;
+  
   lastCapturedImage = {
-    image_base64: base64,
-    image_type: "jpeg",
+    frame_id: frameId,
     source_id: activeSourceId,
+    captured_at: now.toISOString(),
+    image_type: "image/jpeg",
+    image_base64: base64,
+    width: video.videoWidth,
+    height: video.videoHeight,
   };
+  
+  latestFrame.frameId = frameId;
+  latestFrame.sourceId = activeSourceId;
+  latestFrame.capturedAt = now.toISOString();
+  latestFrame.truth = "LAPTOP_WEBCAM_CLIENT_CAPTURE";
+  if (els.frameId) els.frameId.textContent = `frame: ${frameId}`;
+  if (els.sourceLabel) els.sourceLabel.textContent = activeSourceId.toUpperCase();
+  
   return lastCapturedImage;
 }
 

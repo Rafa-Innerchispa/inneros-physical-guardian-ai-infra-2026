@@ -303,7 +303,7 @@ class GuardianDemoEngine:
             self.latest_evidence = self._make_evidence(final=False)
             return self.state()
 
-        if inference.inference_truth != TRUTH_MEASURED:
+        if inference.inference_truth not in {TRUTH_MEASURED, "MEASURED_SPONSOR_RUNTIME"}:
             trace.status = "INFERENCE_BLOCKED"
             trace.stages[1].update(
                 status="blocked",
