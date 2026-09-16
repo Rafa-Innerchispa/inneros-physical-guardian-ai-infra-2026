@@ -81,7 +81,7 @@ class RemoteCameraSource:
             "truth": "UNVERIFIED",
         }
 
-    def capture(self, *, now: datetime | None = None, timeout: float = 4.0) -> FramePayload:
+    def capture(self, *, now: datetime | None = None, timeout: float = 12.0) -> FramePayload:
         headers = {"Accept": "image/jpeg, image/png", "Cache-Control": "no-cache"}
         if self.token_env:
             token = os.environ.get(self.token_env, "")

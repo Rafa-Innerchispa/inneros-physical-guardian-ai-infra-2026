@@ -521,12 +521,17 @@ function renderCameraSources(sources) {
 
 function renderReceipt(evidence, trace) {
   const src = trace || evidence?.governance || {};
-  const sima = evidence?.sima_telemetry || trace?.sima_telemetry || {};
+  const inference = trace?.inference || evidence?.inference || {};
+  const sima = evidence?.sima_telemetry || trace?.sima_telemetry || (inference.telemetry ? {
+    truth: inference.inference_truth || trace?.truth?.detections || "MEASURED",
+    detections_count: (inference.detections || []).length
+  } : {});
 
   els.receiptFrame.textContent = latestFrame.frameId ? `${latestFrame.sourceId} / ${latestFrame.frameId}` : "UNVERIFIED";
-  els.receiptSima.textContent = sima.truth ? normalizeTruth(sima.truth) : "UNVERIFIED";
-  els.receiptDetections.textContent = (sima.detections_count !== undefined && sima.detections_count !== null)
-    ? `${sima.detections_count} backend detection(s) for matched frame`
+  els.receiptSima.textContent = sima.truth ? normalizeTruth(sima.truth) : (trace?.inference ? "MEASURED (SiMa Modalix)" : "UNVERIFIED");
+  const detCount = sima.detections_count ?? (inference.detections ? inference.detections.length : null);
+  els.receiptDetections.textContent = (detCount !== undefined && detCount !== null && detCount > 0)
+    ? `${detCount} backend detection(s) for matched frame`
     : "No backend detections";
 
   els.receiptDecision.textContent = src.decision ? humanize(src.decision).toUpperCase() : "No decision";
@@ -574,12 +579,17 @@ function renderLifecycle(trace) {
   for (const event of (trace.lifecycle_events || []).slice(-6)) {
     const row = document.createElement("div");
     row.className = "lifecycle-event";
+    row.style.display = "flex";
+    row.style.alignItems = "center";
+    row.style.gap = "8px";
+    row.style.marginBottom = "4px";
     const state = document.createElement("strong");
     state.textContent = humanize(event.state, "STATE").toUpperCase();
     const summary = document.createElement("span");
     summary.textContent = event.summary || "";
+    summary.style.flex = "1";
     const truth = document.createElement("small");
-    truth.textContent = normalizeTruth(event.truth);
+    truth.textContent = `[${normalizeTruth(event.truth)}]`;
     row.append(state, summary, truth);
     els.lifecycleTimeline.appendChild(row);
   }
