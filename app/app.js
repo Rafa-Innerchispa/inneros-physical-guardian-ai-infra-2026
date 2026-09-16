@@ -298,9 +298,8 @@ function drawDetections(detections, payload) {
     ctx.fillText(label + confidence, x + 6, Math.max(16, y - 6));
   }
 
-  els.inferenceFrameTruth.textContent = normalizeTruth(
-    payload?.truth || payload?.inference_truth || payload?.sima?.truth || "MEASURED"
-  );
+  const rawTruth = payload?.truth || payload?.inference_truth || payload?.sima?.truth || null;
+  els.inferenceFrameTruth.textContent = rawTruth ? normalizeTruth(rawTruth) : "UNVERIFIED";
   els.frameMatch.textContent = "MATCHED";
 }
 
@@ -368,8 +367,8 @@ function renderReceipt(evidence, trace) {
   const sima = evidence?.sima_telemetry || trace?.sima_telemetry || {};
 
   els.receiptFrame.textContent = latestFrame.frameId ? `${latestFrame.sourceId} / ${latestFrame.frameId}` : "UNVERIFIED";
-  els.receiptSima.textContent = normalizeTruth(sima.truth || "MEASURED");
-  els.receiptDetections.textContent = sima.detections_count
+  els.receiptSima.textContent = sima.truth ? normalizeTruth(sima.truth) : "UNVERIFIED";
+  els.receiptDetections.textContent = (sima.detections_count !== undefined && sima.detections_count !== null)
     ? `${sima.detections_count} backend detection(s) for matched frame`
     : "No backend detections";
 
@@ -430,13 +429,21 @@ function renderLifecycle(trace) {
 }
 
 function renderHeroHardwareCard(sima, sourceId, frameId) {
-  if (!sima) return;
+  if (!sima || !sima.truth || normalizeTruth(sima.truth) !== "MEASURED") {
+    els.heroProofDevice.textContent = "SiMa.ai Modalix EV74";
+    els.heroProofModel.textContent = "YOLO26m • PyNeat 0.4.0";
+    els.heroProofLatency.textContent = "---";
+    els.heroProofFps.textContent = "MLA Anchor-Free";
+    els.heroProofDetections.textContent = "0 Objects";
+    els.heroProofAttestation.textContent = "UNVERIFIED";
+    return;
+  }
   els.heroProofDevice.textContent = sima.device || "SiMa.ai Modalix EV74";
-  els.heroProofModel.textContent = `${sima.model || "YOLO26m"} • ${sima.runtime || "PyNeat 0.4.0"}`;
-  els.heroProofLatency.textContent = sima.latency_ms ? `${sima.latency_ms.toFixed(2)} ms` : "31.36 ms";
-  els.heroProofFps.textContent = sima.fps ? `${sima.fps.toFixed(1)} FPS MLSoC throughput` : "31.8 FPS MLSoC throughput";
+  els.heroProofModel.textContent = `${sima.model || "yolo26m"} • ${sima.runtime || "PyNeat 0.4.0"}`;
+  els.heroProofLatency.textContent = sima.latency_ms ? `${sima.latency_ms.toFixed(2)} ms` : "---";
+  els.heroProofFps.textContent = sima.fps ? `${sima.fps.toFixed(1)} FPS MLSoC` : (sima.latency_ms ? `${(1000 / sima.latency_ms).toFixed(1)} FPS MLSoC` : "---");
   els.heroProofDetections.textContent = `${sima.detections_count ?? 0} Objects`;
-  els.heroProofAttestation.textContent = normalizeTruth(sima.truth || "MEASURED") + " / MATCHED";
+  els.heroProofAttestation.textContent = normalizeTruth(sima.truth) + " / MATCHED";
 }
 
 function resetFrameUi({ clearFrame = true } = {}) {
@@ -467,6 +474,7 @@ function resetRunView({ clearFrame = true } = {}) {
   els.decisionEmptyTitle.textContent = "No physical action pending";
   els.decisionEmptyDesc.textContent =
     "Guardian will expose a proposed action only after backend policy evaluation. Nothing executes from preview alone.";
+  renderHeroHardwareCard(null);
   renderStages([], null);
 }
 
@@ -484,15 +492,19 @@ function syncLatestFrameFromState(state) {
     els.sourceLabel.textContent = latestFrame.sourceId.toUpperCase();
   }
 
-  if (sima) {
+  if (sima && normalizeTruth(sima.truth) === "MEASURED") {
     renderHeroHardwareCard(sima, latestFrame.sourceId, latestFrame.frameId);
     els.simaModel.textContent = sima.model || "yolo26m-seg-bf16-b1";
     els.simaRuntime.textContent = sima.runtime || "PyNeat 0.4.0 / SiMa MLA";
     els.simaDevice.textContent = sima.device || "SiMa.ai Modalix DevKit";
-    els.simaLatency.textContent = sima.latency_ms ? `~${sima.latency_ms.toFixed(2)} ms` : "~31.36 ms";
-    els.simaFps.textContent = sima.fps ? `~${sima.fps.toFixed(1)}` : "~31.8";
+    els.simaLatency.textContent = sima.latency_ms ? `~${sima.latency_ms.toFixed(2)} ms` : "---";
+    els.simaFps.textContent = sima.fps ? `~${sima.fps.toFixed(1)}` : "---";
     setHealth("sima", "READY", "MEASURED");
     setHealth("mla", "READY", "MEASURED");
+  } else {
+    renderHeroHardwareCard(null);
+    setHealth("sima", "READY", "UNVERIFIED");
+    setHealth("mla", "READY", "UNVERIFIED");
   }
 }
 
@@ -598,30 +610,23 @@ async function startCamera() {
   } catch (err) {
     console.warn("Camera start failed or permission denied:", err);
     els.previewFail.classList.remove("hidden");
-    els.previewFailTitle.textContent = "CAMERA INPUT STREAMING";
-    els.previewFailText.textContent = "Click '⚡ RUN LIVE SiMa DEMO' to capture and infer through the Modalix DevKit.";
-    setHealth("camera", "READY", "UNVERIFIED");
+    els.previewFailTitle.textContent = "CAMERA INPUT INACTIVE";
+    els.previewFailText.textContent = "Please allow webcam access or select a GYE camera to run live inference.";
+    setHealth("camera", "OFFLINE", "UNVERIFIED");
   }
 }
 
 function captureCurrentFrame() {
   const canvas = els.captureCanvas;
   const video = els.localVideo;
-  if (!video || !video.videoWidth) {
-    canvas.width = 1280;
-    canvas.height = 720;
-    const ctx = canvas.getContext("2d");
-    ctx.fillStyle = "#0c131d";
-    ctx.fillRect(0, 0, 1280, 720);
-    ctx.fillStyle = "#38bdf8";
-    ctx.font = "bold 28px monospace";
-    ctx.fillText("LAPTOP WEBCAM CAPTURE - LIVE FRAME", 100, 360);
-  } else {
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  if (!video || !video.videoWidth || !activeStream) {
+    // P0: Do NOT generate artificial frame / canvas placeholder
+    return null;
   }
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
   const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
   const base64 = dataUrl.split(",")[1];
@@ -643,6 +648,17 @@ async function runLiveSiMaDemo() {
         await startCamera();
       }
       const frameData = captureCurrentFrame();
+      if (!frameData) {
+        els.previewFail.classList.remove("hidden");
+        els.previewFailTitle.textContent = "BLOCKED — NO REAL FRAME CAPTURED";
+        els.previewFailText.textContent = "Webcam stream is inactive. Please allow camera permissions or start camera before running live inference.";
+        showToast("BLOCKED: No real webcam frame captured");
+        setHealth("camera", "OFFLINE", "UNVERIFIED");
+        setHealth("sima", "READY", "UNVERIFIED");
+        resetRunView({ clearFrame: true });
+        return;
+      }
+
       const res = await fetch("/api/inference/frame", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -696,7 +712,17 @@ async function runLiveSiMaDemo() {
     }
   } catch (err) {
     console.error("runLiveSiMaDemo error:", err);
-    showToast(`Error running live demo: ${err.message}`);
+    clearOverlay();
+    setHealth("sima", "BLOCKED", "UNVERIFIED");
+    setHealth("mla", "BLOCKED", "UNVERIFIED");
+    els.inferenceFrameTruth.textContent = "UNVERIFIED";
+    els.frameMatch.textContent = "UNVERIFIED";
+    els.approvalBoundaryKicker.textContent = "INFERENCE FAILED";
+    els.approvalState.textContent = "SAFELY BLOCKED (INFERENCE FAILED)";
+    els.decisionEmptyTitle.textContent = "Inference Failed Safe";
+    els.decisionEmptyDesc.textContent = "SiMa DevKit / sidecar communication failed. Guardian remains fail-closed.";
+    renderHeroHardwareCard(null);
+    showToast(`Inference fail-closed: ${err.message}`);
   } finally {
     els.runLiveDemoBtn.disabled = false;
     els.runLiveDemoBtn.textContent = "⚡ RUN LIVE SiMa DEMO";

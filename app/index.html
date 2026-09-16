@@ -31,7 +31,7 @@
         <div class="health-cell" data-health="sima">
           <span>SiMa MODALIX</span>
           <strong id="simaHealth">READY</strong>
-          <small id="simaTruth">MEASURED</small>
+          <small id="simaTruth">UNVERIFIED</small>
         </div>
         <div class="health-cell" data-health="guardian">
           <span>GUARDIAN</span>
@@ -41,13 +41,13 @@
         <div class="health-cell" data-health="evidence">
           <span>EVIDENCE</span>
           <strong id="evidenceHealth">READY</strong>
-          <small id="evidenceTruth">SEALED</small>
+          <small id="evidenceTruth">UNVERIFIED</small>
         </div>
         <!-- Hidden health cell for test compatibility -->
         <div class="health-cell hidden" data-health="mla">
           <span>MLA RUNTIME</span>
           <strong id="mlaHealth">READY</strong>
-          <small id="mlaTruth">MEASURED</small>
+          <small id="mlaTruth">UNVERIFIED</small>
         </div>
       </section>
     </header>
@@ -137,7 +137,7 @@
           <canvas id="overlayCanvas" width="1280" height="720" aria-label="Backend detection overlay"></canvas>
           <div class="preview-fail" id="previewFail">
             <strong id="previewFailTitle">LOCAL PREVIEW READY</strong>
-            <span id="previewFailText">Click '⚡ RUN LIVE SiMa DEMO' to capture and infer through the Modalix DevKit.</span>
+            <span id="previewFailText">Click '⚡ RUN LIVE SiMa DEMO' to capture real frame and infer on the Modalix DevKit.</span>
           </div>
           <div class="preview-label top-left">
             <strong id="sourceLabel">LAPTOP WEBCAM</strong>
@@ -176,22 +176,22 @@
         <article class="hero-proof-card" id="hardwareHeroCard">
           <div class="card-head-compact">
             <span class="proof-badge">REAL HARDWARE PROOF</span>
-            <span class="provenance-chip" id="heroProofAttestation">MEASURED / MATCHED</span>
+            <span class="provenance-chip" id="heroProofAttestation">UNVERIFIED</span>
           </div>
           <div class="proof-compact-grid">
             <div class="proof-item">
               <span class="lbl">DEVICE</span>
               <strong id="heroProofDevice">SiMa.ai Modalix EV74</strong>
-              <small>Embedded MLSoC (192.168.1.20)</small>
+              <small>Target (192.168.1.20)</small>
             </div>
             <div class="proof-item">
               <span class="lbl">RUNTIME</span>
               <strong id="heroProofModel">YOLO26m • PyNeat 0.4.0</strong>
-              <small id="heroProofFps">MLA Anchor-Free • 31.8 FPS</small>
+              <small id="heroProofFps">MLA Anchor-Free</small>
             </div>
             <div class="proof-item">
               <span class="lbl">LATENCY</span>
-              <strong class="highlight-val" id="heroProofLatency">31.36 ms</strong>
+              <strong class="highlight-val" id="heroProofLatency">---</strong>
               <small>Live measured</small>
             </div>
             <div class="proof-item">
@@ -286,7 +286,7 @@
 
           <div class="receipt-table" id="receiptGrid">
             <div class="r-row"><span class="r-k">Frame / Source:</span><strong class="r-v" id="receiptFrame">UNVERIFIED</strong></div>
-            <div class="r-row"><span class="r-k">SiMa Truth:</span><strong class="r-v chip-measured" id="receiptSima">MEASURED</strong></div>
+            <div class="r-row"><span class="r-k">SiMa Truth:</span><strong class="r-v" id="receiptSima">UNVERIFIED</strong></div>
             <div class="r-row"><span class="r-k">Detections:</span><strong class="r-v" id="receiptDetections">No backend detections</strong></div>
             <div class="r-row"><span class="r-k">Policy Decision:</span><strong class="r-v" id="receiptDecision">No decision</strong></div>
             <div class="r-row"><span class="r-k">Approval State:</span><strong class="r-v" id="receiptApproval">No action pending</strong></div>
@@ -336,9 +336,9 @@
             <div><span>Model</span><strong id="simaModel">yolo26m-seg-bf16-b1</strong></div>
             <div><span>Runtime</span><strong id="simaRuntime">PyNeat 0.4.0 / SiMa MLA</strong></div>
             <div><span>Device</span><strong id="simaDevice">SiMa.ai Modalix DevKit</strong></div>
-            <div><span>Latency</span><strong id="simaLatency">~31.36 ms</strong></div>
-            <div><span>FPS</span><strong id="simaFps">~31.8</strong></div>
-            <div><span>Frame match</span><strong id="frameMatch">MATCHED</strong></div>
+            <div><span>Latency</span><strong id="simaLatency">---</strong></div>
+            <div><span>FPS</span><strong id="simaFps">---</strong></div>
+            <div><span>Frame match</span><strong id="frameMatch">UNVERIFIED</strong></div>
           </div>
 
           <label class="select-label advanced-select">
