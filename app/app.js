@@ -226,11 +226,20 @@ function detectionFrameMatches(payload) {
     payload?.inference?.source?.source_id ||
     payload?.current?.frame_source?.source_id ||
     null;
+  const shaRef =
+    payload?.sha256 ||
+    payload?.frame_source?.sha256 ||
+    payload?.inference?.source?.sha256 ||
+    payload?.current?.frame_source?.sha256 ||
+    null;
 
   if (frameRef && latestFrame.frameId && String(frameRef) !== latestFrame.frameId) {
     return false;
   }
   if (sourceRef && latestFrame.sourceId && String(sourceRef) !== latestFrame.sourceId) {
+    return false;
+  }
+  if (shaRef && latestFrame.sha256 && String(shaRef) !== latestFrame.sha256) {
     return false;
   }
   if (frameRef && latestFrame.frameId && String(frameRef) === latestFrame.frameId && sourceRef && latestFrame.sourceId && String(sourceRef) === latestFrame.sourceId) {
@@ -364,13 +373,30 @@ function drawDetections(detections, payload) {
 
   for (const detection of displayList) {
     const rawBbox = detection.bbox || [0, 0, 1, 1];
-    const [rawX, rawY, rawW, rawH] = rawBbox.map(Number);
-    if (![rawX, rawY, rawW, rawH].every(Number.isFinite)) continue;
-    const normalized = rawX <= 1 && rawY <= 1 && rawW <= 1 && rawH <= 1;
-    const x = normalized ? rawX * width : rawX;
-    const y = normalized ? rawY * height : rawY;
-    const w = normalized ? rawW * width : rawW;
-    const h = normalized ? rawH * height : rawH;
+    const [raw0, raw1, raw2, raw3] = rawBbox.map(Number);
+    if (![raw0, raw1, raw2, raw3].every(Number.isFinite)) continue;
+    const isNormalized = raw0 <= 1 && raw1 <= 1 && raw2 <= 1 && raw3 <= 1;
+    let x1 = isNormalized ? raw0 * width : raw0;
+    let y1 = isNormalized ? raw1 * height : raw1;
+    let x2 = isNormalized ? raw2 * width : raw2;
+    let y2 = isNormalized ? raw3 * height : raw3;
+
+    let boxX, boxY, boxW, boxH;
+    if (x2 > x1 && y2 > y1 && raw2 <= 1 && raw3 <= 1) {
+      boxX = x1;
+      boxY = y1;
+      boxW = x2 - x1;
+      boxH = y2 - y1;
+    } else {
+      boxX = x1;
+      boxY = y1;
+      boxW = x2;
+      boxH = y2;
+    }
+    const x = boxX;
+    const y = boxY;
+    const w = boxW;
+    const h = boxH;
     const objClass = (detection.object_class || detection.label || detection.class || "object").toUpperCase();
     const confidence =
       typeof detection.confidence === "number" && Number.isFinite(detection.confidence)
@@ -577,14 +603,16 @@ function resetRunView({ clearFrame = true } = {}) {
 }
 
 function syncLatestFrameFromState(state) {
-  const trace = state?.current || null;
-  const evidence = state?.latest_evidence || null;
-  const sima = evidence?.sima_telemetry || trace?.sima_telemetry || null;
-  const frameSource = trace?.frame_source || evidence?.governance?.frame_source || null;
+  const trace = state?.current || (state?.trace_id ? state : null);
+  const evidence = state?.latest_evidence || (state?.evidence_id ? state : null);
+  const sima = evidence?.sima_telemetry || trace?.sima_telemetry || trace?.inference?.telemetry || null;
+  const frameSource = trace?.frame_source || evidence?.governance?.frame_source || trace?.inference?.source || state?.frame_source || null;
 
   if (frameSource?.frame_id) {
     latestFrame.frameId = frameSource.frame_id;
     latestFrame.sourceId = frameSource.source_id || latestFrame.sourceId;
+    latestFrame.sha256 = frameSource.sha256 || latestFrame.sha256;
+    latestFrame.capturedAt = frameSource.captured_at || latestFrame.capturedAt;
     latestFrame.truth = normalizeTruth(frameSource.truth);
     els.frameId.textContent = `frame: ${latestFrame.frameId}`;
     els.sourceLabel.textContent = latestFrame.sourceId.toUpperCase();
@@ -730,6 +758,8 @@ async function fetchRemoteSnapshot(sourceId) {
 
       latestFrame.frameId = data.frame_id;
       latestFrame.sourceId = data.source_id;
+      latestFrame.sha256 = data.sha256;
+      latestFrame.capturedAt = data.captured_at;
       latestFrame.truth = "ALLOWLISTED_REMOTE_SNAPSHOT";
       els.frameId.textContent = `frame: ${data.frame_id}`;
       els.sourceLabel.textContent = data.source_id.toUpperCase();
@@ -806,11 +836,29 @@ async function runLiveSiMaDemo() {
       const isNewFrame = frameId !== lastSubmittedFrameId;
       lastSubmittedFrameId = frameId;
 
-      syncLatestFrameFromState({ current: payload });
+      syncLatestFrameFromState(payload);
       const detections = extractDetections(payload);
       drawDetections(detections, payload);
-      renderState({ current: payload });
-      showToast("Live inference evaluated fail-closed (Modalix offline)");
+      renderState(payload);
+
+      const trace = payload?.current || (payload?.trace_id ? payload : null);
+      const isMeasured = Boolean(
+        payload?.sima_telemetry?.truth === "MEASURED" ||
+        payload?.truth?.detections === "MEASURED" ||
+        payload?.current?.truth?.detections === "MEASURED" ||
+        payload?.inference_truth === "MEASURED"
+      );
+      if (isMeasured) {
+        if (trace?.status === "AWAITING_APPROVAL") {
+          showToast(`⚡ SiMa detected ${detections.length} object(s) • Policy triggered • Awaiting Operator Approval`);
+        } else if (trace?.status === "POLICY_NOT_TRIGGERED" || trace?.decision === "NO_ACTION") {
+          showToast(`✓ SiMa detected ${detections.length} object(s) • No security policy triggered (No action required)`);
+        } else {
+          showToast(`✓ SiMa inference complete • ${detections.length} object(s) detected`);
+        }
+      } else {
+        showToast("Webcam frame captured • SiMa Modalix offline (fail-closed safe)");
+      }
     } else {
       // Remote source (GYE Dahua Ch2/Ch3)
       const res = await fetch("/api/inference/source", {
@@ -828,7 +876,7 @@ async function runLiveSiMaDemo() {
       const isNewFrame = frameId !== lastSubmittedFrameId;
       lastSubmittedFrameId = frameId;
 
-      syncLatestFrameFromState({ current: payload });
+      syncLatestFrameFromState(payload);
 
       if (payload.image_base64 || payload.snapshot_base64) {
         if (activeStream) activeStream.getTracks().forEach((t) => t.stop());
@@ -840,8 +888,26 @@ async function runLiveSiMaDemo() {
 
       const detections = extractDetections(payload);
       drawDetections(detections, payload);
-      renderState({ current: payload });
-      showToast("Real Guayaquil frame received • SiMa inference OFFLINE (fail-closed)");
+      renderState(payload);
+
+      const trace = payload?.current || (payload?.trace_id ? payload : null);
+      const isMeasured = Boolean(
+        payload?.sima_telemetry?.truth === "MEASURED" ||
+        payload?.truth?.detections === "MEASURED" ||
+        payload?.current?.truth?.detections === "MEASURED" ||
+        payload?.inference_truth === "MEASURED"
+      );
+      if (isMeasured) {
+        if (trace?.status === "AWAITING_APPROVAL") {
+          showToast(`⚡ Real Guayaquil frame • SiMa detected ${detections.length} object(s) • Policy triggered • Awaiting Operator Approval`);
+        } else if (trace?.status === "POLICY_NOT_TRIGGERED" || trace?.decision === "NO_ACTION") {
+          showToast(`✓ Real Guayaquil frame • SiMa detected ${detections.length} object(s) • No security policy triggered`);
+        } else {
+          showToast(`✓ Real Guayaquil frame • SiMa inference complete • ${detections.length} object(s) detected`);
+        }
+      } else {
+        showToast("Real Guayaquil frame received • SiMa inference OFFLINE (fail-closed safe)");
+      }
     }
   } catch (err) {
     console.error("runLiveSiMaDemo error:", err);

@@ -354,19 +354,22 @@ class GuardianDemoEngine:
             trace.status = "POLICY_NOT_TRIGGERED"
             trace.truth["temporal_reasoning"] = "NOT_ESTABLISHED_FROM_LOW_CONFIDENCE_PERCEPTION"
             trace.truth["policy"] = "NO_ACTION_LOW_CONFIDENCE"
+            has_non_required = any(d.label not in required_labels for d in inference.detections)
+            policy_summary = (
+                "Objects detected successfully. No configured security policy triggered. No action required."
+                if has_non_required
+                else "Detection below Guardian policy threshold. No action required."
+            )
             trace.stages[2].update(
                 status="blocked",
-                summary=(
-                    "No required detection met the 0.25 Guardian policy threshold; "
-                    "raw measured detections remain visible as telemetry only"
-                ),
+                summary=policy_summary,
                 runtime=runtime_dict,
-                truth="INSUFFICIENT_CONFIDENCE",
+                truth="INSUFFICIENT_CONFIDENCE" if not has_non_required else "NO_POLICY_MATCH",
             )
             trace.stages[3].update(
                 status="complete",
                 summary="Policy evaluated fail-closed: no bounded action proposed",
-                reason_codes=["LOW_CONFIDENCE_NO_ACTION"],
+                reason_codes=["LOW_CONFIDENCE_NO_ACTION" if not has_non_required else "NO_POLICY_TRIGGER"],
                 truth="NO_ACTION",
             )
             trace.stages[4].update(
@@ -385,8 +388,8 @@ class GuardianDemoEngine:
             )
             self._record_lifecycle(
                 "POLICY_NOT_TRIGGERED",
-                "Measured perception stayed below the policy threshold; no action or approval was created",
-                "NO_ACTION_LOW_CONFIDENCE",
+                policy_summary,
+                "NO_ACTION",
             )
             self.latest_evidence = self._make_evidence(final=False)
             return self.state()
