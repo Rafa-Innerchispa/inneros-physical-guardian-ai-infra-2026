@@ -1,0 +1,1150 @@
+{
+  "timestamp": "2026-09-16T01:48:06.050017+00:00",
+  "backend_sha": "d69f9af7865cc22a9c0a51bc6002bac631cb9d63",
+  "ui_sha": "8d0fd2c67d7e87baf782e653b142afaba00a0e59",
+  "infrastructure": {
+    "amd_node": "100.72.153.124 (Tailscale)",
+    "dahua_channels": [
+      2,
+      3
+    ],
+    "modalix_target": "192.168.1.20 (aarch64 EV74)",
+    "bridge_url_ch2": "http://100.72.153.124:8790/api/snapshot/2",
+    "bridge_url_ch3": "http://100.72.153.124:8790/api/snapshot/3"
+  },
+  "ch2": {
+    "source_id": "gye-dahua-ch2",
+    "frame_id": "remote-gye-dahua-ch2-52464ec1abf94e08",
+    "dimensions": "352x240",
+    "bytes": 7570,
+    "sha256": "81079c3478041b869b5a5a12c4724067bdb7f843a322654c2d23399ee818f9ba",
+    "snapshot_ms": 456.5,
+    "inference_ms": 9964.9,
+    "trace_id": "trace-fe9e81240d0c",
+    "status": "POLICY_NOT_TRIGGERED",
+    "frame_source": {
+      "frame_id": "remote-gye-dahua-ch2-52464ec1abf94e08",
+      "source_id": "gye-dahua-ch2",
+      "sha256": "81079c3478041b869b5a5a12c4724067bdb7f843a322654c2d23399ee818f9ba",
+      "media_type": "image/jpeg",
+      "width": 352,
+      "height": 240,
+      "captured_at": "2026-09-16T01:48:03.050035+00:00",
+      "truth": "ALLOWLISTED_REMOTE_SNAPSHOT"
+    },
+    "inference": {
+      "runtime_id": "sima-slot",
+      "provider": "SiMa.ai",
+      "model": "yolo26m-seg-bf16-b1",
+      "detections": [
+        {
+          "label": "potted plant",
+          "confidence": 0.010328,
+          "bbox": [
+            0.452734,
+            0.081641,
+            0.625781,
+            0.207813
+          ],
+          "track_id": null,
+          "zone": null,
+          "class_id": 58
+        },
+        {
+          "label": "person",
+          "confidence": 0.009413,
+          "bbox": [
+            0.451953,
+            0.071094,
+            0.628906,
+            0.396094
+          ],
+          "track_id": null,
+          "zone": null,
+          "class_id": 0
+        },
+        {
+          "label": "train",
+          "confidence": 0.008847,
+          "bbox": [
+            0.000781,
+            0.001563,
+            0.233594,
+            0.342969
+          ],
+          "track_id": null,
+          "zone": null,
+          "class_id": 6
+        },
+        {
+          "label": "train",
+          "confidence": 0.006098,
+          "bbox": [
+            0.0,
+            0.000391,
+            0.865625,
+            0.199219
+          ],
+          "track_id": null,
+          "zone": null,
+          "class_id": 6
+        },
+        {
+          "label": "person",
+          "confidence": 0.005385,
+          "bbox": [
+            0.003125,
+            0.001563,
+            0.35,
+            0.96875
+          ],
+          "track_id": null,
+          "zone": null,
+          "class_id": 0
+        },
+        {
+          "label": "person",
+          "confidence": 0.004905,
+          "bbox": [
+            0.419141,
+            0.003906,
+            0.443164,
+            0.068066
+          ],
+          "track_id": null,
+          "zone": null,
+          "class_id": 0
+        },
+        {
+          "label": "train",
+          "confidence": 0.004905,
+          "bbox": [
+            0.0,
+            0.004687,
+            0.244531,
+            0.828125
+          ],
+          "track_id": null,
+          "zone": null,
+          "class_id": 6
+        },
+        {
+          "label": "potted plant",
+          "confidence": 0.004755,
+          "bbox": [
+            0.567773,
+            0.396289,
+            0.645117,
+            0.540625
+          ],
+          "track_id": null,
+          "zone": null,
+          "class_id": 58
+        },
+        {
+          "label": "potted plant",
+          "confidence": 0.003945,
+          "bbox": [
+            0.450781,
+            0.003906,
+            0.74375,
+            0.392188
+          ],
+          "track_id": null,
+          "zone": null,
+          "class_id": 58
+        },
+        {
+          "label": "person",
+          "confidence": 0.003824,
+          "bbox": [
+            0.566699,
+            0.432031,
+            0.619727,
+            0.580859
+          ],
+          "track_id": null,
+          "zone": null,
+          "class_id": 0
+        },
+        {
+          "label": "chair",
+          "confidence": 0.003824,
+          "bbox": [
+            0.684375,
+            0.001563,
+            0.999219,
+            0.33125
+          ],
+          "track_id": null,
+          "zone": null,
+          "class_id": 56
+        },
+        {
+          "label": "person",
+          "confidence": 0.003377,
+          "bbox": [
+            0.0,
+            0.098877,
+            0.003857,
+            0.129492
+          ],
+          "track_id": null,
+          "zone": null,
+          "class_id": 0
+        },
+        {
+          "label": "umbrella",
+          "confidence": 0.003075,
+          "bbox": [
+            0.000195,
+            0.000586,
+            0.096484,
+            0.068945
+          ],
+          "track_id": null,
+          "zone": null,
+          "class_id": 25
+        },
+        {
+          "label": "potted plant",
+          "confidence": 0.002801,
+          "bbox": [
+            0.297754,
+            0.437695,
+            0.337695,
+            0.493555
+          ],
+          "track_id": null,
+          "zone": null,
+          "class_id": 58
+        },
+        {
+          "label": "person",
+          "confidence": 0.002715,
+          "bbox": [
+            0.0,
+            0.095898,
+            0.008484,
+            0.189062
+          ],
+          "track_id": null,
+          "zone": null,
+          "class_id": 0
+        },
+        {
+          "label": "traffic light",
+          "confidence": 0.002632,
+          "bbox": [
+            0.042969,
+            0.000391,
+            0.095117,
+            0.038379
+          ],
+          "track_id": null,
+          "zone": null,
+          "class_id": 9
+        },
+        {
+          "label": "fire hydrant",
+          "confidence": 0.002116,
+          "bbox": [
+            0.566895,
+            0.433203,
+            0.618359,
+            0.54375
+          ],
+          "track_id": null,
+          "zone": null,
+          "class_id": 10
+        }
+      ],
+      "runtime_overhead_ms": 7046.0767,
+      "inference_truth": "MEASURED_SPONSOR_RUNTIME",
+      "notes": "Fresh frame executed by the target-side PyNeat runner and decoded from the same raw outputs.",
+      "runtime": "PyNeat 0.4.0 / SiMa MLA",
+      "device": "SiMa.ai Modalix DevKit MLSoC",
+      "captured_at": "2026-09-16T01:48:03.050035+00:00",
+      "inferred_at": "2026-09-16T01:48:15.230579+00:00",
+      "source": {
+        "frame_id": "remote-gye-dahua-ch2-52464ec1abf94e08",
+        "source_id": "gye-dahua-ch2",
+        "sha256": "81079c3478041b869b5a5a12c4724067bdb7f843a322654c2d23399ee818f9ba",
+        "media_type": "image/jpeg",
+        "width": 352,
+        "height": 240
+      },
+      "telemetry": {
+        "source": "MODALIX_RUNTIME",
+        "latency_ms": 30.797,
+        "model_build_ms": 2725.985,
+        "preprocessing_ms": 30.948,
+        "decode_ms": 43.943
+      },
+      "attestation": {
+        "kind": "SIMA_MODALIX_RUNTIME",
+        "runtime_verified": true,
+        "device_verified": true,
+        "evidence_id": "modalix-a64380566fc1ed244772df1f78d4bdb3",
+        "transport": "SSH_STRICT_HOST_KEY",
+        "request_nonce": "0df273f1ff04029e345b4da639888fc5",
+        "model_sha256": "41bebbecca2f20de40c76d4bc6656c3fe369f9c139929dad93922492efa9b591",
+        "worker_sha256": "2295e9f1f6f22688bd1800fcd2b90ae086336be37f20958a05dc71cc3d59ff8f",
+        "raw_output_sha256": "3d6c3c710242b5fa884c28a7b20447df60d4e9c25e49fb343dc7ecbb413ea83f",
+        "output_tensor_count": 10,
+        "output_tensor_shapes": [
+          [
+            80,
+            80,
+            4
+          ],
+          [
+            40,
+            40,
+            4
+          ],
+          [
+            20,
+            20,
+            4
+          ],
+          [
+            80,
+            80,
+            80
+          ],
+          [
+            40,
+            40,
+            80
+          ],
+          [
+            20,
+            20,
+            80
+          ],
+          [
+            80,
+            80,
+            32
+          ],
+          [
+            40,
+            40,
+            32
+          ],
+          [
+            20,
+            20,
+            32
+          ],
+          [
+            160,
+            160,
+            32
+          ]
+        ],
+        "decode_method": "YOLO26_ANCHOR_FREE_LTRB_SIGMOID_COCO80_CLASS_AWARE_NMS_V1",
+        "confidence_floor": 0.002,
+        "policy_confidence_threshold": 0.25,
+        "nms_iou_threshold": 0.45,
+        "pre_nms_top_k": 300,
+        "post_nms_top_k": 30,
+        "execution_status": "REAL_TARGET_MLA_DECODE_SUCCESS",
+        "wire_protocol": "GUARDIAN_LENGTH_PREFIXED_METADATA_IMAGE_V1",
+        "worker_instance_id": "modalix-worker-d68ccfeea9a3441b33ecc573",
+        "model_load_count": 1,
+        "model_rebuilt_for_frame": false,
+        "request_sequence": 1
+      }
+    },
+    "detections_count": 17,
+    "detections": [
+      {
+        "label": "potted plant",
+        "confidence": 0.010328,
+        "bbox": [
+          0.452734,
+          0.081641,
+          0.625781,
+          0.207813
+        ],
+        "track_id": null,
+        "zone": null,
+        "class_id": 58
+      },
+      {
+        "label": "person",
+        "confidence": 0.009413,
+        "bbox": [
+          0.451953,
+          0.071094,
+          0.628906,
+          0.396094
+        ],
+        "track_id": null,
+        "zone": null,
+        "class_id": 0
+      },
+      {
+        "label": "train",
+        "confidence": 0.008847,
+        "bbox": [
+          0.000781,
+          0.001563,
+          0.233594,
+          0.342969
+        ],
+        "track_id": null,
+        "zone": null,
+        "class_id": 6
+      },
+      {
+        "label": "train",
+        "confidence": 0.006098,
+        "bbox": [
+          0.0,
+          0.000391,
+          0.865625,
+          0.199219
+        ],
+        "track_id": null,
+        "zone": null,
+        "class_id": 6
+      },
+      {
+        "label": "person",
+        "confidence": 0.005385,
+        "bbox": [
+          0.003125,
+          0.001563,
+          0.35,
+          0.96875
+        ],
+        "track_id": null,
+        "zone": null,
+        "class_id": 0
+      },
+      {
+        "label": "person",
+        "confidence": 0.004905,
+        "bbox": [
+          0.419141,
+          0.003906,
+          0.443164,
+          0.068066
+        ],
+        "track_id": null,
+        "zone": null,
+        "class_id": 0
+      },
+      {
+        "label": "train",
+        "confidence": 0.004905,
+        "bbox": [
+          0.0,
+          0.004687,
+          0.244531,
+          0.828125
+        ],
+        "track_id": null,
+        "zone": null,
+        "class_id": 6
+      },
+      {
+        "label": "potted plant",
+        "confidence": 0.004755,
+        "bbox": [
+          0.567773,
+          0.396289,
+          0.645117,
+          0.540625
+        ],
+        "track_id": null,
+        "zone": null,
+        "class_id": 58
+      },
+      {
+        "label": "potted plant",
+        "confidence": 0.003945,
+        "bbox": [
+          0.450781,
+          0.003906,
+          0.74375,
+          0.392188
+        ],
+        "track_id": null,
+        "zone": null,
+        "class_id": 58
+      },
+      {
+        "label": "person",
+        "confidence": 0.003824,
+        "bbox": [
+          0.566699,
+          0.432031,
+          0.619727,
+          0.580859
+        ],
+        "track_id": null,
+        "zone": null,
+        "class_id": 0
+      },
+      {
+        "label": "chair",
+        "confidence": 0.003824,
+        "bbox": [
+          0.684375,
+          0.001563,
+          0.999219,
+          0.33125
+        ],
+        "track_id": null,
+        "zone": null,
+        "class_id": 56
+      },
+      {
+        "label": "person",
+        "confidence": 0.003377,
+        "bbox": [
+          0.0,
+          0.098877,
+          0.003857,
+          0.129492
+        ],
+        "track_id": null,
+        "zone": null,
+        "class_id": 0
+      },
+      {
+        "label": "umbrella",
+        "confidence": 0.003075,
+        "bbox": [
+          0.000195,
+          0.000586,
+          0.096484,
+          0.068945
+        ],
+        "track_id": null,
+        "zone": null,
+        "class_id": 25
+      },
+      {
+        "label": "potted plant",
+        "confidence": 0.002801,
+        "bbox": [
+          0.297754,
+          0.437695,
+          0.337695,
+          0.493555
+        ],
+        "track_id": null,
+        "zone": null,
+        "class_id": 58
+      },
+      {
+        "label": "person",
+        "confidence": 0.002715,
+        "bbox": [
+          0.0,
+          0.095898,
+          0.008484,
+          0.189062
+        ],
+        "track_id": null,
+        "zone": null,
+        "class_id": 0
+      },
+      {
+        "label": "traffic light",
+        "confidence": 0.002632,
+        "bbox": [
+          0.042969,
+          0.000391,
+          0.095117,
+          0.038379
+        ],
+        "track_id": null,
+        "zone": null,
+        "class_id": 9
+      },
+      {
+        "label": "fire hydrant",
+        "confidence": 0.002116,
+        "bbox": [
+          0.566895,
+          0.433203,
+          0.618359,
+          0.54375
+        ],
+        "track_id": null,
+        "zone": null,
+        "class_id": 10
+      }
+    ],
+    "truth": {
+      "camera_event": "ALLOWLISTED_REMOTE_SNAPSHOT",
+      "detections": "MEASURED_SPONSOR_RUNTIME",
+      "temporal_reasoning": "NOT_ESTABLISHED_FROM_LOW_CONFIDENCE_PERCEPTION",
+      "policy": "NO_ACTION_LOW_CONFIDENCE",
+      "physical_io": "NOT_EXECUTED",
+      "timings": "MODALIX_RUNTIME_TELEMETRY"
+    },
+    "provenance_pass": true
+  },
+  "ch3": {
+    "source_id": "gye-dahua-ch3",
+    "frame_id": "remote-gye-dahua-ch3-a28ef9ff618547d4",
+    "dimensions": "352x240",
+    "bytes": 6792,
+    "sha256": "ceb4b5163bff488db5dd3ed0118a54cb4b8d5e4351c2e142b9c22f7d47cfc416",
+    "snapshot_ms": 451.1,
+    "inference_ms": 155.1,
+    "trace_id": "trace-42a5f8c3ba29",
+    "status": "POLICY_NOT_TRIGGERED",
+    "frame_source": {
+      "frame_id": "remote-gye-dahua-ch3-a28ef9ff618547d4",
+      "source_id": "gye-dahua-ch3",
+      "sha256": "ceb4b5163bff488db5dd3ed0118a54cb4b8d5e4351c2e142b9c22f7d47cfc416",
+      "media_type": "image/jpeg",
+      "width": 352,
+      "height": 240,
+      "captured_at": "2026-09-16T01:48:13.471544+00:00",
+      "truth": "ALLOWLISTED_REMOTE_SNAPSHOT"
+    },
+    "inference": {
+      "runtime_id": "sima-slot",
+      "provider": "SiMa.ai",
+      "model": "yolo26m-seg-bf16-b1",
+      "detections": [
+        {
+          "label": "train",
+          "confidence": 0.159217,
+          "bbox": [
+            0.738281,
+            0.004687,
+            0.999219,
+            0.4625
+          ],
+          "track_id": null,
+          "zone": null,
+          "class_id": 6
+        },
+        {
+          "label": "person",
+          "confidence": 0.054199,
+          "bbox": [
+            0.000781,
+            0.0125,
+            0.224609,
+            0.990625
+          ],
+          "track_id": null,
+          "zone": null,
+          "class_id": 0
+        },
+        {
+          "label": "train",
+          "confidence": 0.015906,
+          "bbox": [
+            0.000391,
+            0.010937,
+            0.180469,
+            0.996875
+          ],
+          "track_id": null,
+          "zone": null,
+          "class_id": 6
+        },
+        {
+          "label": "bus",
+          "confidence": 0.013223,
+          "bbox": [
+            0.739062,
+            0.00625,
+            0.999219,
+            0.459375
+          ],
+          "track_id": null,
+          "zone": null,
+          "class_id": 5
+        },
+        {
+          "label": "train",
+          "confidence": 0.012821,
+          "bbox": [
+            0.727344,
+            0.0125,
+            1.0,
+            1.0
+          ],
+          "track_id": null,
+          "zone": null,
+          "class_id": 6
+        },
+        {
+          "label": "train",
+          "confidence": 0.012054,
+          "bbox": [
+            0.375,
+            0.0,
+            0.996875,
+            0.990625
+          ],
+          "track_id": null,
+          "zone": null,
+          "class_id": 6
+        },
+        {
+          "label": "person",
+          "confidence": 0.010328,
+          "bbox": [
+            9.8e-05,
+            0.004687,
+            0.07207,
+            1.0
+          ],
+          "track_id": null,
+          "zone": null,
+          "class_id": 0
+        },
+        {
+          "label": "bicycle",
+          "confidence": 0.010328,
+          "bbox": [
+            0.473242,
+            0.09707,
+            0.516992,
+            0.168359
+          ],
+          "track_id": null,
+          "zone": null,
+          "class_id": 1
+        },
+        {
+          "label": "car",
+          "confidence": 0.004905,
+          "bbox": [
+            0.767383,
+            0.131641,
+            0.820117,
+            0.19707
+          ],
+          "track_id": null,
+          "zone": null,
+          "class_id": 2
+        },
+        {
+          "label": "person",
+          "confidence": 0.003377,
+          "bbox": [
+            0.001172,
+            0.40625,
+            0.159766,
+            0.992188
+          ],
+          "track_id": null,
+          "zone": null,
+          "class_id": 0
+        },
+        {
+          "label": "person",
+          "confidence": 0.003075,
+          "bbox": [
+            0.328125,
+            0.0,
+            1.0,
+            0.996875
+          ],
+          "track_id": null,
+          "zone": null,
+          "class_id": 0
+        },
+        {
+          "label": "person",
+          "confidence": 0.002981,
+          "bbox": [
+            0.009375,
+            0.0125,
+            0.732812,
+            1.0
+          ],
+          "track_id": null,
+          "zone": null,
+          "class_id": 0
+        },
+        {
+          "label": "person",
+          "confidence": 0.002473,
+          "bbox": [
+            0.548633,
+            0.129492,
+            0.583203,
+            0.202344
+          ],
+          "track_id": null,
+          "zone": null,
+          "class_id": 0
+        },
+        {
+          "label": "person",
+          "confidence": 0.002397,
+          "bbox": [
+            0.000195,
+            0.632812,
+            0.052734,
+            0.995313
+          ],
+          "track_id": null,
+          "zone": null,
+          "class_id": 0
+        },
+        {
+          "label": "person",
+          "confidence": 0.002397,
+          "bbox": [
+            0.352344,
+            0.361719,
+            0.387891,
+            0.503906
+          ],
+          "track_id": null,
+          "zone": null,
+          "class_id": 0
+        },
+        {
+          "label": "person",
+          "confidence": 0.002397,
+          "bbox": [
+            0.952734,
+            0.134766,
+            0.999658,
+            0.290625
+          ],
+          "track_id": null,
+          "zone": null,
+          "class_id": 0
+        }
+      ],
+      "runtime_overhead_ms": 153.9398,
+      "inference_truth": "MEASURED_SPONSOR_RUNTIME",
+      "notes": "Fresh frame executed by the target-side PyNeat runner and decoded from the same raw outputs.",
+      "runtime": "PyNeat 0.4.0 / SiMa MLA",
+      "device": "SiMa.ai Modalix DevKit MLSoC",
+      "captured_at": "2026-09-16T01:48:13.471544+00:00",
+      "inferred_at": "2026-09-16T01:48:15.892505+00:00",
+      "source": {
+        "frame_id": "remote-gye-dahua-ch3-a28ef9ff618547d4",
+        "source_id": "gye-dahua-ch3",
+        "sha256": "ceb4b5163bff488db5dd3ed0118a54cb4b8d5e4351c2e142b9c22f7d47cfc416",
+        "media_type": "image/jpeg",
+        "width": 352,
+        "height": 240
+      },
+      "telemetry": {
+        "source": "MODALIX_RUNTIME",
+        "latency_ms": 28.511,
+        "model_build_ms": 2725.985,
+        "preprocessing_ms": 9.808,
+        "decode_ms": 43.141
+      },
+      "attestation": {
+        "kind": "SIMA_MODALIX_RUNTIME",
+        "runtime_verified": true,
+        "device_verified": true,
+        "evidence_id": "modalix-2f5c2ca1456e740daf09c147180f3256",
+        "transport": "SSH_STRICT_HOST_KEY",
+        "request_nonce": "5488a4a57add5743b5b8aa9b8b4c7466",
+        "model_sha256": "41bebbecca2f20de40c76d4bc6656c3fe369f9c139929dad93922492efa9b591",
+        "worker_sha256": "2295e9f1f6f22688bd1800fcd2b90ae086336be37f20958a05dc71cc3d59ff8f",
+        "raw_output_sha256": "45dabdca68d3e9dfb5887cae804e34912b431d87590d68c6429badc9554d0127",
+        "output_tensor_count": 10,
+        "output_tensor_shapes": [
+          [
+            80,
+            80,
+            4
+          ],
+          [
+            40,
+            40,
+            4
+          ],
+          [
+            20,
+            20,
+            4
+          ],
+          [
+            80,
+            80,
+            80
+          ],
+          [
+            40,
+            40,
+            80
+          ],
+          [
+            20,
+            20,
+            80
+          ],
+          [
+            80,
+            80,
+            32
+          ],
+          [
+            40,
+            40,
+            32
+          ],
+          [
+            20,
+            20,
+            32
+          ],
+          [
+            160,
+            160,
+            32
+          ]
+        ],
+        "decode_method": "YOLO26_ANCHOR_FREE_LTRB_SIGMOID_COCO80_CLASS_AWARE_NMS_V1",
+        "confidence_floor": 0.002,
+        "policy_confidence_threshold": 0.25,
+        "nms_iou_threshold": 0.45,
+        "pre_nms_top_k": 300,
+        "post_nms_top_k": 30,
+        "execution_status": "REAL_TARGET_MLA_DECODE_SUCCESS",
+        "wire_protocol": "GUARDIAN_LENGTH_PREFIXED_METADATA_IMAGE_V1",
+        "worker_instance_id": "modalix-worker-d68ccfeea9a3441b33ecc573",
+        "model_load_count": 1,
+        "model_rebuilt_for_frame": false,
+        "request_sequence": 2
+      }
+    },
+    "detections_count": 16,
+    "detections": [
+      {
+        "label": "train",
+        "confidence": 0.159217,
+        "bbox": [
+          0.738281,
+          0.004687,
+          0.999219,
+          0.4625
+        ],
+        "track_id": null,
+        "zone": null,
+        "class_id": 6
+      },
+      {
+        "label": "person",
+        "confidence": 0.054199,
+        "bbox": [
+          0.000781,
+          0.0125,
+          0.224609,
+          0.990625
+        ],
+        "track_id": null,
+        "zone": null,
+        "class_id": 0
+      },
+      {
+        "label": "train",
+        "confidence": 0.015906,
+        "bbox": [
+          0.000391,
+          0.010937,
+          0.180469,
+          0.996875
+        ],
+        "track_id": null,
+        "zone": null,
+        "class_id": 6
+      },
+      {
+        "label": "bus",
+        "confidence": 0.013223,
+        "bbox": [
+          0.739062,
+          0.00625,
+          0.999219,
+          0.459375
+        ],
+        "track_id": null,
+        "zone": null,
+        "class_id": 5
+      },
+      {
+        "label": "train",
+        "confidence": 0.012821,
+        "bbox": [
+          0.727344,
+          0.0125,
+          1.0,
+          1.0
+        ],
+        "track_id": null,
+        "zone": null,
+        "class_id": 6
+      },
+      {
+        "label": "train",
+        "confidence": 0.012054,
+        "bbox": [
+          0.375,
+          0.0,
+          0.996875,
+          0.990625
+        ],
+        "track_id": null,
+        "zone": null,
+        "class_id": 6
+      },
+      {
+        "label": "person",
+        "confidence": 0.010328,
+        "bbox": [
+          9.8e-05,
+          0.004687,
+          0.07207,
+          1.0
+        ],
+        "track_id": null,
+        "zone": null,
+        "class_id": 0
+      },
+      {
+        "label": "bicycle",
+        "confidence": 0.010328,
+        "bbox": [
+          0.473242,
+          0.09707,
+          0.516992,
+          0.168359
+        ],
+        "track_id": null,
+        "zone": null,
+        "class_id": 1
+      },
+      {
+        "label": "car",
+        "confidence": 0.004905,
+        "bbox": [
+          0.767383,
+          0.131641,
+          0.820117,
+          0.19707
+        ],
+        "track_id": null,
+        "zone": null,
+        "class_id": 2
+      },
+      {
+        "label": "person",
+        "confidence": 0.003377,
+        "bbox": [
+          0.001172,
+          0.40625,
+          0.159766,
+          0.992188
+        ],
+        "track_id": null,
+        "zone": null,
+        "class_id": 0
+      },
+      {
+        "label": "person",
+        "confidence": 0.003075,
+        "bbox": [
+          0.328125,
+          0.0,
+          1.0,
+          0.996875
+        ],
+        "track_id": null,
+        "zone": null,
+        "class_id": 0
+      },
+      {
+        "label": "person",
+        "confidence": 0.002981,
+        "bbox": [
+          0.009375,
+          0.0125,
+          0.732812,
+          1.0
+        ],
+        "track_id": null,
+        "zone": null,
+        "class_id": 0
+      },
+      {
+        "label": "person",
+        "confidence": 0.002473,
+        "bbox": [
+          0.548633,
+          0.129492,
+          0.583203,
+          0.202344
+        ],
+        "track_id": null,
+        "zone": null,
+        "class_id": 0
+      },
+      {
+        "label": "person",
+        "confidence": 0.002397,
+        "bbox": [
+          0.000195,
+          0.632812,
+          0.052734,
+          0.995313
+        ],
+        "track_id": null,
+        "zone": null,
+        "class_id": 0
+      },
+      {
+        "label": "person",
+        "confidence": 0.002397,
+        "bbox": [
+          0.352344,
+          0.361719,
+          0.387891,
+          0.503906
+        ],
+        "track_id": null,
+        "zone": null,
+        "class_id": 0
+      },
+      {
+        "label": "person",
+        "confidence": 0.002397,
+        "bbox": [
+          0.952734,
+          0.134766,
+          0.999658,
+          0.290625
+        ],
+        "track_id": null,
+        "zone": null,
+        "class_id": 0
+      }
+    ],
+    "truth": {
+      "camera_event": "ALLOWLISTED_REMOTE_SNAPSHOT",
+      "detections": "MEASURED_SPONSOR_RUNTIME",
+      "temporal_reasoning": "NOT_ESTABLISHED_FROM_LOW_CONFIDENCE_PERCEPTION",
+      "policy": "NO_ACTION_LOW_CONFIDENCE",
+      "physical_io": "NOT_EXECUTED",
+      "timings": "MODALIX_RUNTIME_TELEMETRY"
+    },
+    "provenance_pass": true
+  },
+  "final_integrated_sha": "43127d3aded282dc735e3d12be905c36d2a68f91"
+}
