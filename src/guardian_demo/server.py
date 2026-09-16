@@ -12,7 +12,12 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
+from .camera_sources import CameraSourceRegistry
 from .engine import GuardianDemoEngine
+from .frame_input import MAX_JSON_BODY_BYTES, FramePayload
+from .physical_io import PHYSICAL_IO
+from .runtime import RUNTIME_SLOTS
+from .sima_contract import TRUTH_MEASURED
 from .voice import GuardianVoiceRouter, speechmatics_status
 
 
@@ -21,6 +26,82 @@ APP_ROOT = REPO_ROOT / "app"
 ENGINE = GuardianDemoEngine()
 VOICE = GuardianVoiceRouter(ENGINE)
 VOICE_BRIDGE_TOKEN_ENV = "GUARDIAN_VOICE_BRIDGE_TOKEN"
+LOCAL_FRAME_SOURCES = {
+    "laptop-webcam": "LAPTOP_WEBCAM_CLIENT_CAPTURE",
+    "local-prerecorded": "LOCAL_PRERECORDED_SOURCE",
+}
+
+
+class RequestBodyTooLarge(ValueError):
+    """The declared request body exceeds the route's bounded contract."""
+
+
+def _camera_sources() -> tuple[CameraSourceRegistry, str | None]:
+    try:
+        return CameraSourceRegistry.from_environment(), None
+    except RuntimeError as exc:
+        return CameraSourceRegistry(), str(exc)
+
+
+def _source_catalog() -> dict[str, Any]:
+    registry, error = _camera_sources()
+    local = [
+        {
+            "source_id": "laptop-webcam",
+            "label": "Laptop webcam",
+            "kind": "LAPTOP_WEBCAM",
+            "status": "READY",
+            "truth": "UNVERIFIED",
+        },
+        {
+            "source_id": "local-prerecorded",
+            "label": "Local prerecorded media",
+            "kind": "LOCAL_PRERECORDED_SOURCE",
+            "status": "READY",
+            "truth": "UNVERIFIED",
+        },
+    ]
+    return {
+        "sources": [*local, *registry.public_catalog()],
+        "remote": registry.describe(),
+        "configuration_error": error,
+        "arbitrary_urls_allowed": False,
+        "persistence": "NONE",
+    }
+
+
+def _system_status() -> dict[str, Any]:
+    sima = RUNTIME_SLOTS["sima-slot"].status()
+    io = PHYSICAL_IO.status()
+    current = ENGINE.current
+    measured_frame = bool(current and current.truth.get("detections") == TRUTH_MEASURED)
+    evidence_ready = bool(ENGINE.latest_evidence)
+    sima_state = str(sima.get("status", "BLOCKED"))
+    io_state = "READY" if io.get("status") == "READY_CONFIGURED" else (
+        "BLOCKED" if io.get("status") == "INVALID_LOCAL_BRIDGE_CONFIG" else "DEGRADED"
+    )
+    return {
+        "camera": {"status": "READY", "truth": "UNVERIFIED"},
+        "sima_modalix": {
+            "status": "READY" if measured_frame else sima_state,
+            "truth": "MEASURED" if measured_frame else "UNVERIFIED",
+        },
+        "mla": {
+            "status": "READY" if measured_frame else sima_state,
+            "truth": "MEASURED" if measured_frame else "UNVERIFIED",
+        },
+        "guardian": {"status": "READY", "truth": "REAL"},
+        "physical_io": {
+            "status": io_state,
+            "truth": "REAL" if current and current.truth.get("physical_io") in {"PRODUCT_HTTP_READBACK", "REAL_LOW_VOLTAGE_HARDWARE"} else (
+                "SIMULATED" if current and current.truth.get("physical_io") == "SIMULATED_REFERENCE_IO" else "UNVERIFIED"
+            ),
+        },
+        "evidence": {
+            "status": "READY" if evidence_ready else "OFFLINE",
+            "truth": "MEASURED" if measured_frame and evidence_ready else "UNVERIFIED",
+        },
+    }
 
 
 def _auth_config() -> tuple[str, str] | None | bool:
@@ -41,11 +122,24 @@ class GuardianDemoHandler(BaseHTTPRequestHandler):
         # Keep local demo logs minimal and free of request bodies or credentials.
         print(f"[guardian-demo] {self.address_string()} {fmt % args}")
 
-    def _send_json(self, payload: dict[str, Any], status: int = HTTPStatus.OK) -> None:
+    def _send_json(
+        self,
+        payload: dict[str, Any],
+        status: int = HTTPStatus.OK,
+        *,
+        close_connection: bool = False,
+    ) -> None:
         body = json.dumps(payload, indent=2, sort_keys=False).encode("utf-8")
+        if close_connection:
+            self.close_connection = True
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("Referrer-Policy", "no-referrer")
+        if close_connection:
+            self.send_header("Connection", "close")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -96,12 +190,14 @@ class GuardianDemoHandler(BaseHTTPRequestHandler):
         self._challenge_auth()
         return False
 
-    def _read_json(self) -> dict[str, Any]:
+    def _read_json(self, *, max_bytes: int = 64_000) -> dict[str, Any]:
         length = int(self.headers.get("Content-Length", "0") or "0")
         if length <= 0:
             return {}
-        if length > 64_000:
-            raise ValueError("request body too large")
+        if length > max_bytes:
+            raise RequestBodyTooLarge("request body too large")
+        if self.headers.get_content_type().lower() != "application/json":
+            raise ValueError("Content-Type must be application/json")
         raw = self.rfile.read(length)
         parsed = json.loads(raw.decode("utf-8"))
         if not isinstance(parsed, dict):
@@ -133,6 +229,11 @@ class GuardianDemoHandler(BaseHTTPRequestHandler):
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "DENY")
         self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header(
+            "Content-Security-Policy",
+            "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+        )
+        self.send_header("Permissions-Policy", "camera=(self), microphone=(self), geolocation=()")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -156,7 +257,16 @@ class GuardianDemoHandler(BaseHTTPRequestHandler):
             )
             return
         if path == "/api/catalog":
-            self._send_json(ENGINE.catalog())
+            catalog = ENGINE.catalog()
+            catalog["camera_sources"] = _source_catalog()
+            catalog["system_status"] = _system_status()
+            self._send_json(catalog)
+            return
+        if path == "/api/camera/sources":
+            self._send_json(_source_catalog())
+            return
+        if path == "/api/system/status":
+            self._send_json(_system_status())
             return
         if path == "/api/state":
             self._send_json(ENGINE.state())
@@ -184,7 +294,8 @@ class GuardianDemoHandler(BaseHTTPRequestHandler):
         if not self._guard(path):
             return
         try:
-            payload = self._read_json()
+            max_bytes = MAX_JSON_BODY_BYTES if path == "/api/inference/frame" else 64_000
+            payload = self._read_json(max_bytes=max_bytes)
             if path == "/api/demo/run":
                 result = ENGINE.run(
                     str(payload.get("scenario", "loitering_after_hours")),
@@ -204,6 +315,38 @@ class GuardianDemoHandler(BaseHTTPRequestHandler):
                 result = ENGINE.resume()
             elif path == "/api/action/cancel":
                 result = ENGINE.cancel()
+            elif path == "/api/inference/frame":
+                frame = FramePayload.from_json(payload)
+                if frame.source_id not in LOCAL_FRAME_SOURCES:
+                    raise PermissionError("frame source_id is not allowlisted for client submission")
+                result = ENGINE.run_frame(
+                    scenario=str(payload.get("scenario", "loitering_after_hours")),
+                    runtime_id="sima-slot",
+                    frame=frame,
+                    source_truth=LOCAL_FRAME_SOURCES[frame.source_id],
+                )
+            elif path == "/api/inference/source":
+                registry, configuration_error = _camera_sources()
+                if configuration_error:
+                    self._send_json(
+                        {"status": "REMOTE_SOURCE_BLOCKED", "truth": "UNVERIFIED", "error": "remote camera configuration is invalid"},
+                        HTTPStatus.SERVICE_UNAVAILABLE,
+                    )
+                    return
+                try:
+                    frame = registry.capture(payload.get("source_id"))
+                except RuntimeError:
+                    self._send_json(
+                        {"status": "REMOTE_SOURCE_BLOCKED", "truth": "UNVERIFIED", "error": "allowlisted remote snapshot is unavailable"},
+                        HTTPStatus.SERVICE_UNAVAILABLE,
+                    )
+                    return
+                result = ENGINE.run_frame(
+                    scenario=str(payload.get("scenario", "loitering_after_hours")),
+                    runtime_id="sima-slot",
+                    frame=frame,
+                    source_truth="ALLOWLISTED_REMOTE_SNAPSHOT",
+                )
             elif path == "/api/voice/intent":
                 result = VOICE.route(
                     str(payload.get("transcript", "")),
@@ -214,6 +357,12 @@ class GuardianDemoHandler(BaseHTTPRequestHandler):
                 self._send_json({"error": "unknown API route"}, HTTPStatus.NOT_FOUND)
                 return
             self._send_json(result)
+        except RequestBodyTooLarge as exc:
+            self._send_json(
+                {"error": str(exc), "fail_closed": True},
+                HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
+                close_connection=True,
+            )
         except PermissionError as exc:
             self._send_json({"error": str(exc), "fail_closed": True}, HTTPStatus.FORBIDDEN)
         except (ValueError, RuntimeError, json.JSONDecodeError) as exc:

@@ -78,7 +78,7 @@ class PhysicalIOBridge:
     def _validate_identity(payload: dict[str, Any], expected: dict[str, str]) -> None:
         for field_name, expected_value in expected.items():
             supplied = payload.get(field_name)
-            if supplied is not None and supplied != expected_value:
+            if supplied != expected_value:
                 raise RuntimeError(f"Physical I/O response identity mismatch: {field_name}")
 
     @staticmethod
@@ -148,7 +148,7 @@ class PhysicalIOBridge:
         total_started = perf_counter()
         accepted, action_ms = self._post_json(base_url + "/v1/action", action_payload)
         self._validate_identity(accepted, identity)
-        if accepted.get("ok") is not True or accepted.get("accepted") is False:
+        if accepted.get("ok") is not True or accepted.get("accepted") is not True:
             raise RuntimeError("Physical I/O action was not accepted")
 
         verified, verify_ms = self._post_json(base_url + "/v1/verify", identity)
@@ -156,9 +156,9 @@ class PhysicalIOBridge:
         if verified.get("ok") is not True or verified.get("verified") is not True:
             raise RuntimeError("Physical I/O readback verification failed")
 
-        truth = str(verified.get("truth") or accepted.get("truth") or "PRODUCT_HTTP_READBACK")
-        if truth not in ALLOWED_TRUTH:
-            truth = "PRODUCT_HTTP_READBACK"
+        truth = verified.get("truth")
+        if not isinstance(truth, str) or truth not in ALLOWED_TRUTH:
+            raise RuntimeError("Physical I/O readback truth is missing or unrecognized")
 
         return {
             "ok": True,
@@ -206,9 +206,9 @@ class PhysicalIOBridge:
         if verified.get("ok") is not True or verified.get("verified") is not True:
             raise RuntimeError("Physical I/O safe-state re-verification failed")
 
-        truth = str(verified.get("truth") or "PRODUCT_HTTP_READBACK")
-        if truth not in ALLOWED_TRUTH:
-            truth = "PRODUCT_HTTP_READBACK"
+        truth = verified.get("truth")
+        if not isinstance(truth, str) or truth not in ALLOWED_TRUTH:
+            raise RuntimeError("Physical I/O readback truth is missing or unrecognized")
         return {
             "ok": True,
             "verified": True,

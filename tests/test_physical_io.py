@@ -52,7 +52,7 @@ class ContractHandler(BaseHTTPRequestHandler):
         self.send_error(HTTPStatus.NOT_FOUND)
 
 
-def start_contract_server(*, verify_success: bool = True, truth: str = "PRODUCT_HTTP_READBACK"):
+def start_contract_server(*, verify_success: bool = True, truth: str | None = "PRODUCT_HTTP_READBACK"):
     server = ThreadingHTTPServer(("127.0.0.1", 0), ContractHandler)
     server.requests = []  # type: ignore[attr-defined]
     server.verify_success = verify_success  # type: ignore[attr-defined]
@@ -112,6 +112,28 @@ def test_bridge_maps_action_and_requires_verified_readback(monkeypatch: pytest.M
         assert [row[0] for row in requests] == ["/v1/action", "/v1/verify"]
         assert requests[0][1]["parameters"] == {"state": "on"}
         assert requests[0][2] == "guardian-action-bridge-test"
+    finally:
+        stop_contract_server(server, thread)
+
+
+@pytest.mark.parametrize("truth", [None, "", "UNKNOWN_PHYSICAL_TRUTH"])
+def test_bridge_rejects_missing_or_unknown_physical_truth(
+    monkeypatch: pytest.MonkeyPatch,
+    truth: str | None,
+) -> None:
+    server, thread = start_contract_server(truth=truth)
+    try:
+        host, port = server.server_address
+        monkeypatch.setenv(ENV_VAR, f"http://{host}:{port}")
+        with pytest.raises(RuntimeError, match="truth is missing or unrecognized"):
+            PhysicalIOBridge().execute(
+                ProposedAction(
+                    action_id="action-unknown-truth",
+                    action_type="beacon_warning",
+                    target="reference-low-voltage-beacon",
+                    reason="must fail closed",
+                )
+            )
     finally:
         stop_contract_server(server, thread)
 

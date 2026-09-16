@@ -8,6 +8,7 @@ and Physical I/O bridge with scoped PID tracking and zero simulated fallback in 
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import json
 import os
 import signal
@@ -22,7 +23,6 @@ from urllib.request import Request, urlopen
 REPO_ROOT = Path(__file__).resolve().parents[1]
 STATE_FILE = REPO_ROOT / ".guardian_live_pids.json"
 EVIDENCE_FILE = REPO_ROOT / "docs" / "sima_measured_evidence.json"
-GATE_SCRIPT = REPO_ROOT / "scripts" / "sima_live_evidence_gate.py"
 SIDECAR_SCRIPT = REPO_ROOT / "scripts" / "sima_sidecar_live.py"
 DEMO_SERVER_SCRIPT = REPO_ROOT / "scripts" / "run_demo.py"
 
@@ -93,19 +93,29 @@ def stop_scoped_services() -> dict[str, str]:
     return results
 
 
-def validate_prerequisites(strict_live: bool = True) -> tuple[bool, list[str]]:
+def validate_prerequisites(
+    strict_live: bool = True,
+    *,
+    transport: str | None = None,
+    devkit_ip: str = "",
+) -> tuple[bool, list[str]]:
     errors: list[str] = []
-    if not EVIDENCE_FILE.is_file():
-        errors.append(f"Evidence file missing: {EVIDENCE_FILE}")
-    elif strict_live and GATE_SCRIPT.is_file():
-        # Validate through offline gate
-        proc = subprocess.run(
-            [sys.executable, str(GATE_SCRIPT), str(EVIDENCE_FILE)],
-            capture_output=True,
-            text=True,
-        )
-        if proc.returncode != 0:
-            errors.append(f"SiMa live evidence gate rejected evidence (code {proc.returncode}): {proc.stderr or proc.stdout}")
+    # Historical benchmark evidence is informational only. It cannot certify a
+    # new camera frame and is deliberately not a strict-live prerequisite.
+    selected_transport = transport or os.environ.get("GUARDIAN_SIMA_TRANSPORT", "http")
+    if selected_transport not in {"ssh", "http"}:
+        errors.append("strict live transport must be ssh or http")
+    if (
+        strict_live
+        and selected_transport == "http"
+        and not os.environ.get("GUARDIAN_SIMA_MODALIX_INFER_URL", "").strip()
+    ):
+        errors.append("GUARDIAN_SIMA_MODALIX_INFER_URL is required for strict HTTP live mode")
+    if strict_live and selected_transport == "ssh":
+        try:
+            ipaddress.ip_address(devkit_ip)
+        except ValueError:
+            errors.append("strict SSH live mode requires a valid Modalix DevKit IP")
 
     if not SIDECAR_SCRIPT.is_file():
         errors.append(f"SiMa sidecar script missing: {SIDECAR_SCRIPT}")
@@ -118,10 +128,17 @@ def launch_live_stack(
     sidecar_port: int = DEFAULT_SIDECAR_PORT,
     demo_port: int = DEFAULT_DEMO_PORT,
     devkit_ip: str = "192.168.1.20",
+    transport: str = "ssh",
+    ssh_user: str = "sima",
+    ssh_port: int = 22,
     strict_live: bool = True,
     max_wait_sec: float = 6.0,
 ) -> dict[str, Any]:
-    valid_prereqs, prereq_errors = validate_prerequisites(strict_live=strict_live)
+    valid_prereqs, prereq_errors = validate_prerequisites(
+        strict_live=strict_live,
+        transport=transport,
+        devkit_ip=devkit_ip,
+    )
     if not valid_prereqs:
         return {
             "status": "BLOCKED",
@@ -151,14 +168,19 @@ def launch_live_stack(
                 pass
 
         env = os.environ.copy()
+        env["PYTHONPATH"] = str(REPO_ROOT / "src") + (
+            os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else ""
+        )
         proc = subprocess.Popen(
             [
                 sys.executable,
                 str(SIDECAR_SCRIPT),
                 "--port", str(sidecar_port),
-                "--mode", "live",
+                "--mode", "live" if strict_live else "fixture",
                 "--devkit-ip", devkit_ip,
-                "--evidence", str(EVIDENCE_FILE),
+                "--transport", transport,
+                "--ssh-user", ssh_user,
+                "--ssh-port", str(ssh_port),
             ],
             cwd=str(REPO_ROOT),
             env=env,
@@ -183,6 +205,9 @@ def launch_live_stack(
                 pass
 
         env = os.environ.copy()
+        env["PYTHONPATH"] = str(REPO_ROOT / "src") + (
+            os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else ""
+        )
         env["GUARDIAN_SIMA_RUNTIME_URL"] = f"http://127.0.0.1:{sidecar_port}"
         proc_demo = subprocess.Popen(
             [
@@ -227,7 +252,7 @@ def launch_live_stack(
     # 4. Strict Live Verification Check
     if strict_live:
         sidecar_info = get_sidecar_status(sidecar_url) or {}
-        if sidecar_info.get("status") != "OK":
+        if sidecar_info.get("status") != "READY":
             return {
                 "status": "BLOCKED",
                 "reason": f"SiMa sidecar reported unhealthy status: {sidecar_info}",
@@ -239,9 +264,10 @@ def launch_live_stack(
         "demo_ui_url": f"http://127.0.0.1:{demo_port}",
         "sidecar_state": sidecar_state,
         "demo_state": demo_state,
-        "mode": "MEASURED_LIVE" if strict_live else "DEMO",
-        "evidence_file": str(EVIDENCE_FILE),
-        "rehearsal_cmd": f"GUARDIAN_SIMA_RUNTIME_URL=http://127.0.0.1:{sidecar_port} python scripts/judge_rehearsal.py --runtime sima-slot --require-measured-sponsor",
+        "mode": "STRICT_PER_FRAME" if strict_live else "DEMO",
+        "sima_transport": transport,
+        "historical_evidence_file": str(EVIDENCE_FILE) if EVIDENCE_FILE.is_file() else None,
+        "next_action": "Open the console and submit a current allowlisted camera frame; measured truth remains locked until its Modalix attestation validates.",
         "pids": active_pids,
     }
 
@@ -257,10 +283,10 @@ def print_summary(res: dict[str, Any]) -> None:
         print(f"  SiMa Sidecar:   {res.get('sidecar_url')}")
         print(f"  Sidecar State:  {res.get('sidecar_state')}")
         print(f"  Demo State:     {res.get('demo_state')}")
-        print(f"  Evidence Path:  {res.get('evidence_file')}")
+        print(f"  Historical Doc: {res.get('historical_evidence_file')}")
         print("------------------------------------------------------------")
-        print("  Judge Demonstration Ready. Run rehearsal:")
-        print(f"    {res.get('rehearsal_cmd')}")
+        print("  Services ready. Per-frame Modalix proof is still required.")
+        print(f"  Next: {res.get('next_action')}")
     else:
         print(f"  Failure Reason: {res.get('reason')}")
         for err in res.get("errors", []):
@@ -275,6 +301,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--sidecar-port", type=int, default=DEFAULT_SIDECAR_PORT)
     parser.add_argument("--demo-port", type=int, default=DEFAULT_DEMO_PORT)
     parser.add_argument("--devkit-ip", default="192.168.1.20")
+    parser.add_argument("--transport", choices=["ssh", "http"], default="ssh")
+    parser.add_argument("--ssh-user", default="sima")
+    parser.add_argument("--ssh-port", type=int, default=22)
     parser.add_argument("--allow-simulated", action="store_true", help="Allow simulated fixtures (default enforces strict live)")
     parser.add_argument("--json", action="store_true", help="Output machine-readable JSON")
     args = parser.parse_args(argv)
@@ -315,6 +344,9 @@ def main(argv: list[str] | None = None) -> int:
         sidecar_port=args.sidecar_port,
         demo_port=args.demo_port,
         devkit_ip=args.devkit_ip,
+        transport=args.transport,
+        ssh_user=args.ssh_user,
+        ssh_port=args.ssh_port,
         strict_live=strict_live,
     )
 

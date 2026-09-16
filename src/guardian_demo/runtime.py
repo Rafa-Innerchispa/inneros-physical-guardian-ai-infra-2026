@@ -8,7 +8,13 @@ from typing import Any, Protocol
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
+from .frame_input import FramePayload
 from .models import Detection, RuntimeResult
+from .sima_contract import TRUTH_MEASURED, TRUTH_UNVERIFIED, normalize_detection, validate_live_evidence
+
+
+MAX_SIDECAR_RESPONSE_BYTES = 256_000
+SIDECAR_INFERENCE_TIMEOUT_SECONDS = 45.0
 
 
 class ChallengeRuntime(Protocol):
@@ -95,6 +101,10 @@ class SponsorRuntimeSlot:
             raise RuntimeError(f"{self.env_var} must use http or https")
         if parsed.hostname not in {"127.0.0.1", "localhost", "::1"}:
             raise RuntimeError(f"{self.env_var} must point to a loopback-only sponsor sidecar")
+        if parsed.username or parsed.password:
+            raise RuntimeError(f"{self.env_var} must not embed credentials")
+        if parsed.query or parsed.fragment:
+            raise RuntimeError(f"{self.env_var} must not contain query or fragment data")
         return raw.rstrip("/")
 
     def status(self) -> dict[str, str]:
@@ -108,29 +118,54 @@ class SponsorRuntimeSlot:
                 "status": "INVALID_LOCAL_BRIDGE_CONFIG",
                 "truth": "NOT_BENCHMARKED",
             }
+        if not configured:
+            return {
+                "runtime_id": self.runtime_id,
+                "provider": self.provider,
+                "target": self.target,
+                "status": "OFFLINE",
+                "truth": TRUTH_UNVERIFIED,
+            }
+        try:
+            request = Request(self._configured_url() + "/health", method="GET")  # type: ignore[operator]
+            with urlopen(request, timeout=0.75) as response:  # nosec B310 - loopback URL validated above
+                raw = json.loads(response.read(32_001).decode("utf-8"))
+            if not isinstance(raw, dict):
+                raise ValueError("invalid health response")
+            reported = str(raw.get("status", "BLOCKED")).upper()
+            status = "READY" if reported == "READY" else "BLOCKED"
+        except Exception:
+            status = "BLOCKED"
         return {
             "runtime_id": self.runtime_id,
             "provider": self.provider,
             "target": self.target,
-            "status": "READY" if configured else "AWAITING_ASSIGNED_HARDWARE_OR_SDK",
-            "truth": "BRIDGE_DECLARED" if configured else "NOT_BENCHMARKED",
+            "status": status,
+            # Health/configuration is never proof for a particular frame.
+            "truth": TRUTH_UNVERIFIED,
         }
 
     @staticmethod
     def _parse_detection(item: dict[str, Any]) -> Detection:
-        bbox_raw = item.get("bbox", [0, 0, 1, 1])
-        if not isinstance(bbox_raw, list) or len(bbox_raw) != 4:
-            raise RuntimeError("sponsor sidecar detection bbox must contain four values")
+        try:
+            normalized = normalize_detection(item)
+        except ValueError as exc:
+            raise RuntimeError(str(exc)) from exc
         return Detection(
-            label=str(item.get("label", "object")),
-            confidence=float(item.get("confidence", 0.0)),
-            bbox=tuple(float(value) for value in bbox_raw),
-            track_id=str(item.get("track_id", "runtime-track")),
-            zone=str(item.get("zone", "unassigned")),
+            label=str(normalized["label"]),
+            confidence=float(normalized["confidence"]),
+            bbox=tuple(float(value) for value in normalized["bbox"]),
+            track_id=normalized.get("track_id"),
+            zone=normalized.get("zone"),
+            class_id=normalized.get("class_id"),
         )
 
     def infer(self, *, scenario: str, frame_ref: str) -> RuntimeResult:
         base_url = self._configured_url()
+        if self.runtime_id == "sima-slot":
+            raise RuntimeError(
+                "SiMa live inference requires submitted frame bytes; use the per-frame inference route."
+            )
         if not base_url:
             raise RuntimeError(
                 f"{self.provider} runtime is a declared integration slot and cannot run until official hardware/SDK access is available."
@@ -176,6 +211,80 @@ class SponsorRuntimeSlot:
             runtime_overhead_ms=round((perf_counter() - started) * 1000.0, 4),
             inference_truth=truth,
             notes=str(raw.get("notes", "Result supplied by configured local sponsor SDK sidecar.")),
+        )
+
+    def infer_frame(self, *, scenario: str, frame: FramePayload) -> RuntimeResult:
+        """Submit one bounded frame and accept only matching live Modalix proof."""
+
+        base_url = self._configured_url()
+        if not base_url:
+            raise RuntimeError(
+                f"{self.provider} per-frame runtime is unavailable until its loopback sidecar is configured."
+            )
+        payload = json.dumps(
+            {"scenario": scenario, **frame.to_transport()},
+            separators=(",", ":"),
+        ).encode("utf-8")
+        request = Request(
+            base_url + "/infer",
+            data=payload,
+            method="POST",
+            headers={
+                "Accept": "application/json",
+                "Cache-Control": "no-store",
+                "Content-Type": "application/json",
+            },
+        )
+        started = perf_counter()
+        try:
+            with urlopen(request, timeout=SIDECAR_INFERENCE_TIMEOUT_SECONDS) as response:  # nosec B310 - loopback URL validated above
+                if response.headers.get_content_type().lower() != "application/json":
+                    raise RuntimeError("sponsor sidecar response is not JSON")
+                encoded = response.read(MAX_SIDECAR_RESPONSE_BYTES + 1)
+        except RuntimeError:
+            raise
+        except Exception as exc:
+            raise RuntimeError(f"{self.provider} per-frame bridge failed: {type(exc).__name__}") from exc
+        if len(encoded) > MAX_SIDECAR_RESPONSE_BYTES:
+            raise RuntimeError("sponsor sidecar response exceeds the bounded contract")
+        try:
+            raw = json.loads(encoded.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise RuntimeError("sponsor sidecar returned malformed JSON") from exc
+
+        valid, errors = validate_live_evidence(
+            raw,
+            source_bytes=frame.image_bytes,
+            expected_frame_id=frame.frame_id,
+            expected_source_id=frame.source_id,
+            expected_media_type=frame.image_type,
+            expected_dimensions=(frame.width, frame.height),
+        )
+        if not valid:
+            raise RuntimeError("per-frame sponsor evidence rejected: " + "; ".join(errors))
+        if not isinstance(raw, dict):  # validate_live_evidence already rejects this; narrows the type.
+            raise RuntimeError("sponsor sidecar response must be a JSON object")
+
+        detections_raw = raw.get("detections", [])
+        detections = tuple(self._parse_detection(item) for item in detections_raw)
+        telemetry = raw.get("telemetry") if isinstance(raw.get("telemetry"), dict) else {}
+        attestation = raw.get("attestation") if isinstance(raw.get("attestation"), dict) else {}
+        source = raw.get("source") if isinstance(raw.get("source"), dict) else {}
+        return RuntimeResult(
+            runtime_id=self.runtime_id,
+            provider=self.provider,
+            model=str(raw["model"]),
+            detections=detections,
+            runtime_overhead_ms=round((perf_counter() - started) * 1000.0, 4),
+            inference_truth=TRUTH_MEASURED,
+            notes=str(raw.get("notes", "Per-frame result supplied by the configured SiMa sidecar.")),
+            runtime=str(raw["runtime"]),
+            device=str(raw["device"]),
+            captured_at=str(raw["captured_at"]),
+            inferred_at=str(raw["inferred_at"]),
+            source=dict(source),
+            telemetry=dict(telemetry),
+            attestation=dict(attestation),
         )
 
 

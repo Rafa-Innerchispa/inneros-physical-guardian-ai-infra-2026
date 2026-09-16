@@ -20,25 +20,34 @@ validate_prerequisites = launcher_module.validate_prerequisites
 main = launcher_module.main
 
 
-def test_prerequisites_validation_pass() -> None:
+def test_prerequisites_validation_pass(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("GUARDIAN_SIMA_MODALIX_INFER_URL", "http://192.168.1.20/infer")
     ok, errors = validate_prerequisites(strict_live=True)
     assert ok is True
     assert errors == []
 
 
-def test_prerequisites_validation_fail_missing_evidence(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(launcher_module, "EVIDENCE_FILE", tmp_path / "nonexistent.json")
+def test_prerequisites_validation_fails_without_per_frame_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("GUARDIAN_SIMA_MODALIX_INFER_URL", raising=False)
     ok, errors = validate_prerequisites(strict_live=True)
     assert ok is False
-    assert any("Evidence file missing" in e for e in errors)
+    assert any("GUARDIAN_SIMA_MODALIX_INFER_URL" in e for e in errors)
 
 
-def test_launch_and_cleanup_lifecycle() -> None:
+def test_historical_evidence_is_not_a_live_prerequisite(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(launcher_module, "EVIDENCE_FILE", tmp_path / "nonexistent.json")
+    ok, errors = validate_prerequisites(strict_live=False)
+    assert ok is True
+    assert errors == []
+
+
+def test_launch_and_cleanup_lifecycle(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("GUARDIAN_SIMA_MODALIX_INFER_URL", raising=False)
     # 1. Launch on high test ports to avoid conflicts
     res = launch_live_stack(
         sidecar_port=18890,
         demo_port=18000,
-        strict_live=True,
+        strict_live=False,
     )
     try:
         assert res["status"] == "READY"
@@ -50,7 +59,7 @@ def test_launch_and_cleanup_lifecycle() -> None:
         res_reuse = launch_live_stack(
             sidecar_port=18890,
             demo_port=18000,
-            strict_live=True,
+            strict_live=False,
         )
         assert res_reuse["status"] == "READY"
         assert "reused" in res_reuse["sidecar_state"]

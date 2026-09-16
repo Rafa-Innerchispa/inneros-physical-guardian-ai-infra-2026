@@ -81,7 +81,7 @@ def engine_checks() -> None:
     catalog = engine.catalog()
     runtimes = {row["runtime_id"]: row for row in catalog["runtimes"]}
     check(runtimes["local-deterministic"]["status"] == "READY", "offline deterministic runtime is ready")
-    check(runtimes["sima-slot"]["truth"] == "NOT_BENCHMARKED", "SiMa slot does not fabricate a benchmark")
+    check(runtimes["sima-slot"]["truth"] == "SPONSOR_RUNTIME_UNVERIFIED", "SiMa slot does not fabricate a benchmark")
     check(catalog["physical_io"]["status"] == "FALLBACK_ONLY", "Physical I/O defaults to offline fallback")
     check("unlock_door" in catalog["safety"]["denied_actions"], "high-impact door unlock is explicitly denied")
 
@@ -161,9 +161,10 @@ def http_checks() -> None:
         required_ui_markers = (
             "Physical Guardian",
             "See. Understand. Decide. Act. Verify. Prove.",
-            'id="runBtn"',
+            'id="sourceSelect"',
+            'id="analyzeBtn"',
             'id="approveBtn"',
-            'id="ioBadge"',
+            'id="healthIoState"',
             'id="evidencePreview"',
         )
         check(all(marker in body for marker in required_ui_markers), "judge WebUI contains critical controls, I/O status and evidence panel")

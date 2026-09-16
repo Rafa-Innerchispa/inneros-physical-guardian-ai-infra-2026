@@ -1,5 +1,10 @@
 {
   "schema": "inneros.guardian.sima.evidence.v1",
+  "evidence_kind": "HISTORICAL_BENCHMARK",
+  "display_label": "HISTORICAL BENCHMARK",
+  "certifies_live_frames": false,
+  "live_telemetry": false,
+  "scope_note": "Historical benchmark record only; never certifies a current camera frame.",
   "captured_at": "2026-09-15T19:26:41.504814+00:00",
   "truth": "MEASURED_SPONSOR_RUNTIME",
   "measured": true,

@@ -180,6 +180,7 @@ def build_evidence_record(
     )
     return {
         "schema": "inneros.guardian.sima.evidence.v1",
+        "evidence_kind": "HISTORICAL_BENCHMARK",
         "captured_at": datetime.now(timezone.utc).isoformat(),
         "truth": gate.truth,
         "measured": gate.measured,

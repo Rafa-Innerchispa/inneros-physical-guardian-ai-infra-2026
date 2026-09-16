@@ -6,16 +6,21 @@ from guardian_demo.engine import GuardianDemoEngine
 from guardian_demo.models import ProposedAction
 
 
-def test_catalog_exposes_ready_fallback_and_fail_closed_sponsor_slots() -> None:
+def test_catalog_exposes_ready_fallback_and_fail_closed_sponsor_slots(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("GUARDIAN_SIMA_RUNTIME_URL", raising=False)
+    monkeypatch.delenv("GUARDIAN_QUALCOMM_RUNTIME_URL", raising=False)
+    monkeypatch.delenv("GUARDIAN_INTEL_RUNTIME_URL", raising=False)
     engine = GuardianDemoEngine()
     catalog = engine.catalog()
     by_id = {row["runtime_id"]: row for row in catalog["runtimes"]}
 
     assert by_id["local-deterministic"]["status"] == "READY"
     assert by_id["local-deterministic"]["truth"] == "SIMULATED_FIXTURE"
-    assert by_id["sima-slot"]["status"] == "AWAITING_ASSIGNED_HARDWARE_OR_SDK"
-    assert by_id["qualcomm-slot"]["truth"] == "NOT_BENCHMARKED"
-    assert by_id["intel-slot"]["truth"] == "NOT_BENCHMARKED"
+    assert by_id["sima-slot"]["status"] == "OFFLINE"
+    assert by_id["qualcomm-slot"]["truth"] == "SPONSOR_RUNTIME_UNVERIFIED"
+    assert by_id["intel-slot"]["truth"] == "SPONSOR_RUNTIME_UNVERIFIED"
     assert "unlock_door" in catalog["safety"]["denied_actions"]
 
 
@@ -67,9 +72,12 @@ def test_reject_flow_records_safe_noop() -> None:
     assert rejected["latest_evidence"]["final"] is True
 
 
-def test_sponsor_slot_cannot_be_selected_before_real_access() -> None:
+def test_sponsor_slot_cannot_use_legacy_frame_reference(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("GUARDIAN_SIMA_RUNTIME_URL", raising=False)
     engine = GuardianDemoEngine()
-    with pytest.raises(RuntimeError, match="cannot run until official hardware/SDK access"):
+    with pytest.raises(RuntimeError, match="requires submitted frame bytes"):
         engine.run("loitering_after_hours", "sima-slot")
 
 

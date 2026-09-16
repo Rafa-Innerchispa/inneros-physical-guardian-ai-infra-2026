@@ -13,7 +13,14 @@ import sys
 from pathlib import Path
 from typing import Any
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT / "src") not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT / "src"))
+
+from guardian_demo.sima_contract import LIVE_EVIDENCE_SCHEMA, validate_live_evidence
+
 EXPECTED_SCHEMA = "inneros.guardian.sima.evidence.v1"
+EXPECTED_KIND = "HISTORICAL_BENCHMARK"
 TRUTH_MEASURED = "MEASURED_SPONSOR_RUNTIME"
 TRUTH_SIMULATED = "SIMULATED_SPONSOR_SDK"
 TRUTH_UNVERIFIED = "SPONSOR_RUNTIME_UNVERIFIED"
@@ -31,6 +38,8 @@ def validate_evidence(
     schema = data.get("schema")
     if schema != EXPECTED_SCHEMA:
         errors.append(f"Invalid schema: expected '{EXPECTED_SCHEMA}', got '{schema}'")
+    if data.get("evidence_kind") != EXPECTED_KIND:
+        errors.append(f"Historical evidence requires evidence_kind='{EXPECTED_KIND}'")
 
     # 2. Truth rating
     truth = data.get("truth")
@@ -82,7 +91,11 @@ def validate_evidence(
     if strict_measured:
         if not sha256 or not isinstance(sha256, str) or len(sha256) != 64:
             errors.append(f"Invalid source_json_sha256: expected 64-char hex hash, got '{sha256}'")
-        elif source_file_to_check and source_file_to_check.is_file():
+        elif source_file_to_check is None:
+            errors.append("Historical measured integrity requires the raw source benchmark file")
+        elif not source_file_to_check.is_file():
+            errors.append("Historical source benchmark file is missing")
+        else:
             hasher = hashlib.sha256()
             with source_file_to_check.open("rb") as f:
                 for chunk in iter(lambda: f.read(65536), b""):
@@ -111,13 +124,27 @@ def validate_evidence(
     return len(errors) == 0, errors
 
 
+def validate_frame_evidence(
+    data: object,
+    *,
+    source_file_to_check: Path | None,
+) -> tuple[bool, list[str]]:
+    """Validate current-frame proof; historical benchmark JSON is never accepted."""
+
+    source_bytes = None
+    if source_file_to_check is not None and source_file_to_check.is_file():
+        source_bytes = source_file_to_check.read_bytes()
+    return validate_live_evidence(data, source_bytes=source_bytes)
+
+
 def format_report(data: dict[str, Any], is_valid: bool, errors: list[str]) -> str:
     lines = [
         "============================================================",
-        "  SiMa.ai Modalix Evidence Gate Report — InnerOS Guardian",
+        "  SiMa.ai Modalix Historical Benchmark Report — InnerOS Guardian",
         "============================================================",
         f"  Overall Status:  {'[PASS] VALID' if is_valid else '[FAIL] REJECTED'}",
         f"  Schema:          {data.get('schema', 'N/A')}",
+        f"  Evidence Kind:   {data.get('evidence_kind', 'N/A')}",
         f"  Truth:           {data.get('truth', 'N/A')}",
         f"  Measured:        {data.get('measured', 'N/A')}",
         f"  Hardware:        {data.get('hardware', 'N/A')}",
@@ -134,7 +161,7 @@ def format_report(data: dict[str, Any], is_valid: bool, errors: list[str]) -> st
     lines.append(f"  Source Hash:     {data.get('source_json_sha256', 'N/A')}")
     lines.append("------------------------------------------------------------")
     if is_valid:
-        lines.append("  Result: All proof requirements satisfied for sponsor judging.")
+        lines.append("  Result: Historical benchmark integrity verified; this is not live frame telemetry.")
     else:
         lines.append(f"  Gate Violations ({len(errors)}):")
         for err in errors:
@@ -148,6 +175,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("evidence_file", type=Path, help="Path to evidence JSON file (e.g. docs/sima_measured_evidence.json)")
     parser.add_argument("--source-file", type=Path, help="Optional path to source benchmark JSON to verify SHA256")
     parser.add_argument("--allow-simulated", action="store_true", help="Allow SIMULATED_SPONSOR_SDK fixtures (default enforces strict measured)")
+    parser.add_argument("--live-frame", action="store_true", help="Validate v2 per-frame evidence; requires current source frame bytes")
     parser.add_argument("--json", action="store_true", help="Output machine-readable JSON report")
     args = parser.parse_args(argv)
 
@@ -161,18 +189,22 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Error: Failed to parse JSON from {args.evidence_file}: {exc}", file=sys.stderr)
         return 1
 
-    strict_measured = not args.allow_simulated
-    is_valid, errors = validate_evidence(
-        data,
-        strict_measured=strict_measured,
-        source_file_to_check=args.source_file,
-    )
+    if args.live_frame:
+        is_valid, errors = validate_frame_evidence(data, source_file_to_check=args.source_file)
+    else:
+        strict_measured = not args.allow_simulated
+        is_valid, errors = validate_evidence(
+            data,
+            strict_measured=strict_measured,
+            source_file_to_check=args.source_file,
+        )
 
     if args.json:
         report = {
             "valid": is_valid,
             "errors": errors,
             "truth": data.get("truth"),
+            "evidence_kind": data.get("evidence_kind"),
             "measured": data.get("measured"),
             "hardware": data.get("hardware"),
             "model": data.get("model"),

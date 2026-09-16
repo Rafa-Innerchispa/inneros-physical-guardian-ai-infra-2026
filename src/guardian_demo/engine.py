@@ -7,9 +7,11 @@ from time import perf_counter
 from typing import Any
 from uuid import uuid4
 
+from .frame_input import FramePayload
 from .models import DemoTrace, ProposedAction
 from .physical_io import PHYSICAL_IO
 from .runtime import RUNTIME_SLOTS, runtime_catalog, runtime_result_to_dict
+from .sima_contract import TRUTH_MEASURED, TRUTH_UNVERIFIED
 
 
 SCENARIOS: dict[str, dict[str, Any]] = {
@@ -19,6 +21,7 @@ SCENARIOS: dict[str, dict[str, Any]] = {
         "zone": "restricted-lobby",
         "severity": "high",
         "reason_codes": ["AFTER_HOURS", "DWELL_THRESHOLD", "RESTRICTED_ZONE"],
+        "required_labels": ["person"],
         "dwell_seconds": 48,
         "action": "beacon_warning",
         "target": "reference-low-voltage-beacon",
@@ -29,6 +32,7 @@ SCENARIOS: dict[str, dict[str, Any]] = {
         "zone": "service-entry",
         "severity": "medium",
         "reason_codes": ["REPEATED_PRESENCE", "ACCESS_WINDOW", "REVIEW_REQUIRED"],
+        "required_labels": ["person"],
         "attempts": 3,
         "action": "notify_operator",
         "target": "operator-console",
@@ -39,6 +43,7 @@ SCENARIOS: dict[str, dict[str, Any]] = {
         "zone": "equipment-zone",
         "severity": "high",
         "reason_codes": ["ZONE_TRANSITION", "RESTRICTED_ZONE", "POLICY_MATCH"],
+        "required_labels": ["person"],
         "action": "dmx_attention",
         "target": "reference-attention-light",
     },
@@ -46,6 +51,7 @@ SCENARIOS: dict[str, dict[str, Any]] = {
 
 ALLOWED_ACTIONS = {"beacon_warning", "notify_operator", "dmx_attention"}
 DENIED_ACTIONS = {"unlock_door", "disable_alarm", "arbitrary_shell", "open_gate"}
+MIN_LIVE_POLICY_CONFIDENCE = 0.25
 
 
 class GuardianDemoEngine:
@@ -209,6 +215,221 @@ class GuardianDemoEngine:
         self.latest_evidence = self._make_evidence(final=False)
         return self.state()
 
+    def run_frame(
+        self,
+        *,
+        scenario: str,
+        runtime_id: str,
+        frame: FramePayload,
+        source_truth: str,
+    ) -> dict[str, Any]:
+        """Run one submitted frame through the strict sponsor boundary.
+
+        Failure is represented as an evidence-bearing blocked trace. No policy or
+        approval proposal is created until matching measured per-frame proof has
+        crossed both the sidecar and composition-layer validators.
+        """
+
+        if scenario not in SCENARIOS:
+            raise ValueError(f"unknown scenario: {scenario}")
+        if runtime_id != "sima-slot":
+            raise ValueError("camera frames must use the SiMa per-frame runtime")
+
+        config = SCENARIOS[scenario]
+        started = perf_counter()
+        trace = DemoTrace(
+            trace_id=f"trace-{uuid4().hex[:12]}",
+            scenario=scenario,
+            started_at=self._now(),
+            runtime_id=runtime_id,
+            status="INFERENCE_PENDING",
+            frame_source={
+                **frame.source_provenance(),
+                "captured_at": frame.captured_at,
+                "truth": source_truth,
+            },
+            truth={
+                "camera_event": source_truth,
+                "detections": TRUTH_UNVERIFIED,
+                "temporal_reasoning": "PENDING_VERIFIED_PERCEPTION",
+                "policy": "PENDING_VERIFIED_PERCEPTION",
+                "physical_io": "NOT_EXECUTED",
+                "timings": "NO_MODALIX_TELEMETRY",
+            },
+            stages=[
+                {
+                    "stage": "SEE",
+                    "status": "complete",
+                    "summary": f"Bounded frame accepted from allowlisted source {frame.source_id}",
+                    "truth": source_truth,
+                },
+                {
+                    "stage": "PERCEIVE",
+                    "status": "running",
+                    "summary": "Awaiting matching Modalix per-frame evidence",
+                    "truth": TRUTH_UNVERIFIED,
+                },
+                {"stage": "UNDERSTAND", "status": "pending", "summary": "Temporal context locked", "truth": "PENDING"},
+                {"stage": "DECIDE", "status": "pending", "summary": "Policy locked", "truth": "PENDING"},
+                {"stage": "APPROVAL", "status": "pending", "summary": "No action proposed", "truth": "NOT_REQUESTED"},
+                {"stage": "ACT", "status": "pending", "summary": "No action proposed", "truth": "NOT_EXECUTED"},
+                {"stage": "VERIFY", "status": "pending", "summary": "No action to verify", "truth": "NOT_EXECUTED"},
+                {"stage": "PROVE", "status": "pending", "summary": "Draft evidence only", "truth": "PARTIAL"},
+            ],
+        )
+        self.current = trace
+
+        runtime = RUNTIME_SLOTS[runtime_id]
+        try:
+            infer_frame = getattr(runtime, "infer_frame")
+            inference = infer_frame(scenario=scenario, frame=frame)
+        except (AttributeError, RuntimeError) as exc:
+            trace.status = "INFERENCE_BLOCKED"
+            trace.stages[1].update(
+                status="blocked",
+                summary=str(exc),
+                truth=TRUTH_UNVERIFIED,
+            )
+            trace.metrics["frame_to_blocked_ms"] = round((perf_counter() - started) * 1000.0, 3)
+            self._record_lifecycle(
+                "INFERENCE_BLOCKED",
+                "Per-frame SiMa proof was unavailable or invalid; policy and action remain locked",
+                TRUTH_UNVERIFIED,
+            )
+            self.latest_evidence = self._make_evidence(final=False)
+            return self.state()
+
+        if inference.inference_truth != TRUTH_MEASURED:
+            trace.status = "INFERENCE_BLOCKED"
+            trace.stages[1].update(
+                status="blocked",
+                summary="Sponsor response was not verified as measured per-frame inference",
+                truth=TRUTH_UNVERIFIED,
+            )
+            self._record_lifecycle(
+                "INFERENCE_BLOCKED",
+                "Non-measured inference cannot advance the live policy pipeline",
+                TRUTH_UNVERIFIED,
+            )
+            self.latest_evidence = self._make_evidence(final=False)
+            return self.state()
+
+        runtime_dict = runtime_result_to_dict(inference)
+        trace.inference = runtime_dict
+        trace.truth["detections"] = TRUTH_MEASURED
+        trace.truth["temporal_reasoning"] = "DETERMINISTIC_RULE_ON_VERIFIED_PERCEPTION"
+        trace.truth["policy"] = "DETERMINISTIC_RULE_ON_VERIFIED_PERCEPTION"
+        trace.truth["timings"] = (
+            "MODALIX_RUNTIME_TELEMETRY"
+            if inference.telemetry
+            else "NO_MODALIX_TELEMETRY_SUPPLIED"
+        )
+        trace.stages[1].update(
+            status="complete",
+            summary=f"Modalix returned {len(inference.detections)} normalized detection(s) for this frame",
+            runtime=runtime_dict,
+            truth=TRUTH_MEASURED,
+        )
+        trace.metrics["max_detection_confidence"] = max(
+            (detection.confidence for detection in inference.detections),
+            default=0.0,
+        )
+        required_labels = set(config.get("required_labels", []))
+        policy_detections = [
+            detection
+            for detection in inference.detections
+            if detection.confidence >= MIN_LIVE_POLICY_CONFIDENCE
+            and (not required_labels or detection.label in required_labels)
+        ]
+        if not policy_detections:
+            trace.status = "POLICY_NOT_TRIGGERED"
+            trace.truth["temporal_reasoning"] = "NOT_ESTABLISHED_FROM_LOW_CONFIDENCE_PERCEPTION"
+            trace.truth["policy"] = "NO_ACTION_LOW_CONFIDENCE"
+            trace.stages[2].update(
+                status="blocked",
+                summary=(
+                    "No required detection met the 0.25 Guardian policy threshold; "
+                    "raw measured detections remain visible as telemetry only"
+                ),
+                runtime=runtime_dict,
+                truth="INSUFFICIENT_CONFIDENCE",
+            )
+            trace.stages[3].update(
+                status="complete",
+                summary="Policy evaluated fail-closed: no bounded action proposed",
+                reason_codes=["LOW_CONFIDENCE_NO_ACTION"],
+                truth="NO_ACTION",
+            )
+            trace.stages[4].update(
+                status="not_requested",
+                summary="Human approval was not requested because policy did not trigger",
+                truth="NOT_REQUESTED",
+            )
+            trace.stages[5].update(
+                status="safe_noop",
+                summary="NOTHING EXECUTED",
+                truth="NOT_EXECUTED",
+            )
+            trace.metrics["composition_to_no_action_ms"] = round(
+                (perf_counter() - started) * 1000.0,
+                3,
+            )
+            self._record_lifecycle(
+                "POLICY_NOT_TRIGGERED",
+                "Measured perception stayed below the policy threshold; no action or approval was created",
+                "NO_ACTION_LOW_CONFIDENCE",
+            )
+            self.latest_evidence = self._make_evidence(final=False)
+            return self.state()
+        trace.stages[2].update(
+            status="complete",
+            summary=(
+                f"{len(policy_detections)} required detection(s) crossed the policy threshold; "
+                f"temporal policy context: {config['event']}"
+            ),
+            runtime=runtime_dict,
+            truth="DETERMINISTIC_RULE_ON_VERIFIED_PERCEPTION",
+        )
+        trace.stages[3].update(
+            status="complete",
+            summary=f"Policy matched: {', '.join(config['reason_codes'])}",
+            severity=config["severity"],
+            reason_codes=config["reason_codes"],
+            truth="DETERMINISTIC_RULE_ON_VERIFIED_PERCEPTION",
+        )
+
+        action = ProposedAction(
+            action_id=f"action-{uuid4().hex[:10]}",
+            action_type=config["action"],
+            target=config["target"],
+            reason=config["event"],
+        )
+        trace.proposed_action = action
+        trace.status = "AWAITING_APPROVAL"
+        trace.stages[4].update(
+            status="blocked_on_human_approval",
+            summary="Explicit human authorization required",
+            truth="HUMAN_DECISION_PENDING",
+        )
+        trace.stages[5].update(
+            status="blocked_on_human_approval",
+            summary=f"Proposed bounded action: {action.action_type}",
+            truth="NOT_EXECUTED",
+        )
+        trace.metrics["composition_to_proposal_ms"] = round((perf_counter() - started) * 1000.0, 3)
+        trace.metrics["runtime_round_trip_ms"] = inference.runtime_overhead_ms
+        if isinstance(inference.telemetry.get("latency_ms"), (int, float)):
+            trace.metrics["sima_latency_ms"] = inference.telemetry["latency_ms"]
+        if isinstance(inference.telemetry.get("fps"), (int, float)):
+            trace.metrics["sima_fps"] = inference.telemetry["fps"]
+        self._record_lifecycle(
+            "PROPOSED",
+            "Verified per-frame perception produced a bounded proposal; human authorization is required",
+            "DETERMINISTIC_RULE_ON_VERIFIED_PERCEPTION",
+        )
+        self.latest_evidence = self._make_evidence(final=False)
+        return self.state()
+
     def approve(self) -> dict[str, Any]:
         if not self.current or not self.current.proposed_action:
             raise RuntimeError("no proposed action to approve")
@@ -221,6 +442,13 @@ class GuardianDemoEngine:
 
         self.current.decision = "APPROVED"
         self.current.status = "AUTHORIZED"
+        for stage in self.current.stages:
+            if stage["stage"] == "APPROVAL":
+                stage.update(
+                    status="complete",
+                    summary="Human operator approved the bounded proposal",
+                    truth="HUMAN_APPROVAL",
+                )
         self._record_lifecycle(
             "AUTHORIZED",
             "Human operator authorized the bounded action",
@@ -240,6 +468,14 @@ class GuardianDemoEngine:
             if io_status["status"] == "INVALID_LOCAL_BRIDGE_CONFIG":
                 return self._fail_action_safe(
                     "Physical I/O bridge configuration is invalid",
+                    started=started,
+                )
+            if (
+                self.current.truth.get("detections") == TRUTH_MEASURED
+                and io_status["status"] != "READY_CONFIGURED"
+            ):
+                return self._fail_action_safe(
+                    "Verified live inference cannot claim physical execution without a configured readback bridge",
                     started=started,
                 )
             if io_status["status"] == "READY_CONFIGURED":
@@ -481,7 +717,13 @@ class GuardianDemoEngine:
             resume_truth,
         )
         for stage in self.current.stages:
-            if stage["stage"] == "ACT":
+            if stage["stage"] == "APPROVAL":
+                stage.update(
+                    status="rejected",
+                    summary="DENIED — NOTHING EXECUTED",
+                    truth="HUMAN_REJECTION",
+                )
+            elif stage["stage"] == "ACT":
                 stage.update(
                     status="complete",
                     summary=f"Bounded action resumed after re-verification (cycle {next_resume})",
@@ -744,6 +986,8 @@ class GuardianDemoEngine:
             "stages": self.current.stages,
             "metrics": self.current.metrics,
             "truth": self.current.truth,
+            "frame_source": self.current.frame_source,
+            "inference": self.current.inference,
             "physical_io_bridge": PHYSICAL_IO.status(),
             "preexisting_product_boundary": "Rafa-Innerchispa/inneros-physical-guardian",
             "hackathon_composition_boundary": "Rafa-Innerchispa/inneros-physical-guardian-ai-infra-2026",
