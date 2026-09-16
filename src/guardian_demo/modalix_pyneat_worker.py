@@ -411,7 +411,7 @@ def _run_warm_inference(request, image_bytes, state, modules):
         "frame_id": request.get("frame_id"),
         "source_id": request.get("source_id"),
         "source_sha256": source_sha256,
-        "inferred_at": datetime.now(timezone.utc).isoformat(),
+        "inferred_at": max(datetime.now(timezone.utc), datetime.fromisoformat(request.get("captured_at", datetime.now(timezone.utc).isoformat())) if request.get("captured_at") else datetime.now(timezone.utc)).isoformat(),
         "runtime_version": state["runtime_version"],
         "python_version": platform.python_version(),
         "machine": platform.machine(),

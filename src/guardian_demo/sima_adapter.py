@@ -14,6 +14,7 @@ import shlex
 import shutil
 import struct
 import subprocess
+import sys
 import threading
 from collections import deque
 from dataclasses import dataclass
@@ -284,21 +285,51 @@ class ModalixSshPyNeatBackend:
 
     @staticmethod
     def _pump_stdout(stream, responses: Queue[bytes | None]) -> None:
+        decoder = json.JSONDecoder()
         try:
+            fd = stream.fileno()
+            buf = bytearray()
             while True:
-                line = stream.readline(MAX_RUNTIME_RESPONSE_BYTES + 2)
-                if not line:
+                try:
+                    chunk = os.read(fd, 65536)
+                except OSError:
                     break
-                responses.put(line)
+                if not chunk:
+                    break
+                buf.extend(chunk)
+                while True:
+                    brace_pos = buf.find(b"{")
+                    if brace_pos < 0:
+                        buf.clear()
+                        break
+                    if brace_pos > 0:
+                        del buf[:brace_pos]
+                    text = buf.decode("utf-8", errors="replace")
+                    try:
+                        obj, end = decoder.raw_decode(text)
+                    except json.JSONDecodeError:
+                        break
+                    json_bytes = text[:end].encode("utf-8") + b"\n"
+                    responses.put(json_bytes)
+                    del buf[: len(text[:end].encode("utf-8"))]
         finally:
             responses.put(None)
 
     def _pump_stderr(self, stream) -> None:
-        while True:
-            line = stream.readline(1024)
-            if not line:
-                return
-            self._stderr_lines.append(line.rstrip())
+        try:
+            fd = stream.fileno()
+            while True:
+                try:
+                    chunk = os.read(fd, 4096)
+                except OSError:
+                    break
+                if not chunk:
+                    break
+                for line in chunk.splitlines():
+                    if line.strip():
+                        self._stderr_lines.append(line.strip())
+        except Exception:
+            pass
 
     @staticmethod
     def _encode_envelope(payload: dict[str, Any], image_bytes: bytes) -> bytes:

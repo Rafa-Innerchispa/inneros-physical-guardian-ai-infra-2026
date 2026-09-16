@@ -88,7 +88,7 @@ def _system_status() -> dict[str, Any]:
             "truth": "ALLOWLISTED_REMOTE_SNAPSHOT" if (current and current.frame_source and "remote" in str(current.frame_source.get("frame_id", ""))) else "UNVERIFIED"
         },
         "sima_modalix": {
-            "status": "READY" if measured_frame else "OFFLINE",
+            "status": "READY" if (measured_frame or sima.get("status") == "READY") else "OFFLINE",
             "truth": "MEASURED" if measured_frame else "UNVERIFIED",
             "configured_target": "SiMa.ai Modalix EV74 (192.168.1.20)",
         },
@@ -434,8 +434,22 @@ class GuardianDemoHandler(BaseHTTPRequestHandler):
             self._send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
 
 
+class GuardianHTTPServer(ThreadingHTTPServer):
+    allow_reuse_address = True
+    daemon_threads = True
+
+    def server_bind(self):
+        import socket
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        if hasattr(socket, "SO_REUSEPORT"):
+            try:
+                self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+            except OSError:
+                pass
+        super().server_bind()
+
 def build_server(host: str = "127.0.0.1", port: int = 8787) -> ThreadingHTTPServer:
-    return ThreadingHTTPServer((host, port), GuardianDemoHandler)
+    return GuardianHTTPServer((host, port), GuardianDemoHandler)
 
 
 def main() -> None:
