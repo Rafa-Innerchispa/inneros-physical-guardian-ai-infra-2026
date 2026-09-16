@@ -23,7 +23,7 @@ const els = {
   lifecycleTimeline: $("lifecycleTimeline"),
   copyEvidenceBtn: $("copyEvidenceBtn"),
   cameraState: $("cameraState"),
-  localVideo: $("localVideo"),
+  localVideo: $("cameraVideo"),
   prerecordedPreview: $("prerecordedPreview"),
   captureCanvas: $("captureCanvas"),
   overlayCanvas: $("overlayCanvas"),
@@ -68,7 +68,7 @@ const els = {
   receiptDecision: $("receiptDecision"),
   receiptApproval: $("receiptApproval"),
   receiptAction: $("receiptAction"),
-  receiptVerification: $("receiptVerification"),
+  receiptVerification: $("receiptReadback"),
   receiptSeal: $("receiptSeal"),
   evidencePreview: $("evidencePreview"),
   pitchCue: $("pitchCue"),
@@ -86,12 +86,12 @@ const scenarioCopy = {
 
 const sourceLabels = {
   "laptop-webcam": "LAPTOP WEBCAM",
-  "remote-home-camera": "REMOTE HOME CAMERA",
   "local-prerecorded": "LOCAL PRERECORDED",
 };
 
 let latestState = null;
 let latestCatalog = null;
+let latestCameraCatalog = null;
 let latestFrame = null;
 let mediaStream = null;
 let toastTimer = null;
@@ -170,9 +170,61 @@ function humanizeAction(actionType) {
     .join(" ");
 }
 
+function sourceLabel(sourceId) {
+  return sourceLabels[sourceId] || humanize(sourceId, "UNKNOWN SOURCE").toUpperCase();
+}
+
+function currentSourceInfo() {
+  const sourceId = els.sourceSelect.value;
+  const sources = Array.isArray(latestCameraCatalog?.sources) ? latestCameraCatalog.sources : [];
+  return sources.find((source) => source.source_id === sourceId) || {
+    source_id: sourceId,
+    label: sourceLabel(sourceId),
+    kind: sourceId === "local-prerecorded" ? "LOCAL_PRERECORDED_SOURCE" : "LAPTOP_WEBCAM",
+    status: "READY",
+    truth: "UNVERIFIED",
+  };
+}
+
+function isLocalFrameSource(sourceId) {
+  return sourceId === "laptop-webcam" || sourceId === "local-prerecorded";
+}
+
+function isRemoteFrameSource(sourceId) {
+  return Boolean(sourceId) && !isLocalFrameSource(sourceId);
+}
+
 function clearOverlay() {
   const ctx = els.overlayCanvas.getContext("2d");
   ctx.clearRect(0, 0, els.overlayCanvas.width, els.overlayCanvas.height);
+}
+
+function resetInferenceTelemetry() {
+  els.simaModel.textContent = "Not provided";
+  els.simaRuntime.textContent = "Not provided";
+  els.simaDevice.textContent = "Not provided";
+  els.simaLatency.textContent = "Not provided";
+  els.simaFps.textContent = "Not provided";
+  els.historicalBenchmark.textContent = "No historical benchmark supplied by backend.";
+  els.runtimeBadge.textContent = "UNVERIFIED";
+  setHealth("sima", "BLOCKED", "UNVERIFIED");
+  setHealth("mla", "BLOCKED", "UNVERIFIED");
+}
+
+function resetFrameUi({ clearFrame = true } = {}) {
+  if (clearFrame) latestFrame = null;
+  clearOverlay();
+  els.frameId.textContent = latestFrame?.frameId ? `frame: ${latestFrame.frameId}` : "frame: none";
+  els.inferenceFrameTruth.textContent = "UNVERIFIED";
+  els.frameMatch.textContent = "UNVERIFIED";
+}
+
+function resetRunView({ clearFrame = true } = {}) {
+  latestState = { current: null, latest_evidence: null };
+  resetFrameUi({ clearFrame });
+  resetInferenceTelemetry();
+  resetStages();
+  renderState(latestState);
 }
 
 function frameRefFromPayload(payload) {
@@ -180,6 +232,10 @@ function frameRefFromPayload(payload) {
     payload?.frame_id ||
     payload?.frame_ref ||
     payload?.source_frame_id ||
+    payload?.frame_source?.frame_id ||
+    payload?.inference?.source?.frame_id ||
+    payload?.current?.frame_source?.frame_id ||
+    payload?.current?.inference?.source?.frame_id ||
     payload?.source?.frame_id ||
     payload?.camera?.frame_id ||
     null
@@ -190,7 +246,16 @@ function sourceRefFromPayload(payload) {
   if (payload?.source && typeof payload.source === "object") {
     return payload.source.source_id || payload.source.id || payload.source.name || null;
   }
-  return payload?.source_id || payload?.source || payload?.camera?.source_id || null;
+  return (
+    payload?.source_id ||
+    payload?.frame_source?.source_id ||
+    payload?.inference?.source?.source_id ||
+    payload?.current?.frame_source?.source_id ||
+    payload?.current?.inference?.source?.source_id ||
+    payload?.source ||
+    payload?.camera?.source_id ||
+    null
+  );
 }
 
 function detectionFrameMatches(payload) {
@@ -198,6 +263,7 @@ function detectionFrameMatches(payload) {
   const frameRef = frameRefFromPayload(payload);
   const sourceRef = sourceRefFromPayload(payload);
   if (!frameRef || !sourceRef) return false;
+  // Contract guard: frameId !== lastSubmittedFrameId must fail closed.
   return String(frameRef) === latestFrame.frameId && String(sourceRef) === latestFrame.sourceId;
 }
 
@@ -221,9 +287,12 @@ function extractDetections(traceOrPayload) {
     traceOrPayload?.detections,
     traceOrPayload?.runtime?.detections,
     traceOrPayload?.inference?.detections,
+    traceOrPayload?.current?.inference?.detections,
     traceOrPayload?.sima?.detections,
     traceOrPayload?.stages?.find?.((stage) => stage.stage === "UNDERSTAND")?.runtime?.detections,
     traceOrPayload?.stages?.find?.((stage) => stage.stage === "PERCEIVE")?.runtime?.detections,
+    traceOrPayload?.current?.stages?.find?.((stage) => stage.stage === "UNDERSTAND")?.runtime?.detections,
+    traceOrPayload?.current?.stages?.find?.((stage) => stage.stage === "PERCEIVE")?.runtime?.detections,
   ];
   const raw = candidates.find((value) => Array.isArray(value));
   if (!raw) return [];
@@ -277,7 +346,7 @@ async function startLocalPreview() {
   const source = els.sourceSelect.value;
   if (source !== "laptop-webcam") {
     renderSourceMode();
-    showToast(`${sourceLabels[source]} is prepared but not a verified live inference source.`, true);
+    showToast(`${sourceLabel(source)} is prepared but not a verified live inference source.`, true);
     return;
   }
   if (!navigator.mediaDevices?.getUserMedia) {
@@ -309,15 +378,15 @@ function setCameraBlocked(message) {
 
 function renderSourceMode() {
   const source = els.sourceSelect.value;
-  els.sourceLabel.textContent = sourceLabels[source] || "UNKNOWN SOURCE";
+  const sourceInfo = currentSourceInfo();
+  const isRemote = isRemoteFrameSource(source);
+  els.sourceLabel.textContent = sourceLabel(source);
   els.filePickLabel.classList.toggle("hidden", source !== "local-prerecorded");
   els.prerecordedPreview.classList.toggle("hidden", source !== "local-prerecorded" || !els.prerecordedPreview.src);
-  els.localVideo.classList.toggle("hidden", source === "local-prerecorded" && !!els.prerecordedPreview.src);
-  clearOverlay();
-  latestFrame = null;
-  els.frameId.textContent = "frame: none";
-  els.inferenceFrameTruth.textContent = "UNVERIFIED";
-  els.frameMatch.textContent = "UNVERIFIED";
+  els.localVideo.classList.toggle("hidden", isRemote || (source === "local-prerecorded" && !!els.prerecordedPreview.src));
+  els.startCameraBtn.disabled = source !== "laptop-webcam";
+  els.captureFrameBtn.disabled = isRemote;
+  resetFrameUi();
 
   if (source === "laptop-webcam") {
     els.previewFail.classList.toggle("hidden", !!mediaStream);
@@ -327,11 +396,11 @@ function renderSourceMode() {
     return;
   }
 
-  if (source === "remote-home-camera") {
+  if (isRemote) {
     els.previewFail.classList.remove("hidden");
-    els.previewFailText.textContent = "Remote camera connector is not available from the backend.";
-    els.cameraState.textContent = "Remote source blocked";
-    setHealth("camera", "BLOCKED", "UNVERIFIED");
+    els.previewFailText.textContent = "Allowlisted remote source. Snapshot capture and inference are requested server-side; no URL or credential is exposed here.";
+    els.cameraState.textContent = sourceInfo.status === "READY" ? "Remote source ready" : "Remote source blocked";
+    setHealth("camera", sourceInfo.status || "BLOCKED", sourceInfo.truth || "UNVERIFIED");
     return;
   }
 
@@ -367,6 +436,7 @@ function handleLocalFile() {
   els.previewFail.classList.add("hidden");
   els.cameraState.textContent = "Local prerecorded preview";
   setHealth("camera", "DEGRADED", "UNVERIFIED");
+  resetRunView();
 }
 
 function captureFrame() {
@@ -404,35 +474,41 @@ function captureFrame() {
     sourceId: source,
     capturedAt: new Date().toISOString(),
     previewOnly: true,
+    imageType: "image/jpeg",
     dataUrl: canvas.toDataURL("image/jpeg", 0.82),
+    width: canvas.width,
+    height: canvas.height,
   };
+  latestFrame.imageBase64 = latestFrame.dataUrl.split(",", 2)[1] || "";
   els.frameId.textContent = `frame: ${latestFrame.frameId}`;
-  els.inferenceFrameTruth.textContent = "UNVERIFIED";
-  els.frameMatch.textContent = "UNVERIFIED";
-  clearOverlay();
+  resetRunView({ clearFrame: false });
   showToast("Frame captured locally. It is preview evidence only until backend inference returns proof.");
   return latestFrame;
 }
 
 async function requestFrameInference() {
+  if (isRemoteFrameSource(els.sourceSelect.value)) {
+    await requestSourceInference();
+    return;
+  }
   const frame = latestFrame || captureFrame();
   if (!frame) return;
   els.requestInferenceBtn.disabled = true;
+  resetRunView({ clearFrame: false });
   try {
     const payload = {
       frame_id: frame.frameId,
       source_id: frame.sourceId,
       captured_at: frame.capturedAt,
-      image: frame.dataUrl,
+      image_type: frame.imageType,
+      image_base64: frame.imageBase64,
+      width: frame.width,
+      height: frame.height,
       scenario: els.scenarioSelect.value,
-      runtime_id: els.runtimeSelect.value,
-      strict_live: true,
     };
-    const response = await api("/api/frame/infer", { method: "POST", body: JSON.stringify(payload) });
-    const detections = extractDetections(response);
-    drawDetections(detections, response);
-    renderBackendTelemetry(response);
-    renderReceipt(latestState?.latest_evidence, latestState?.current, response);
+    const response = await api("/api/inference/frame", { method: "POST", body: JSON.stringify(payload) });
+    syncLatestFrameFromState(response);
+    renderState(response);
     showToast("Backend frame inference response received.");
   } catch (error) {
     clearOverlay();
@@ -444,6 +520,48 @@ async function requestFrameInference() {
   } finally {
     els.requestInferenceBtn.disabled = false;
   }
+}
+
+async function requestSourceInference() {
+  const sourceId = els.sourceSelect.value;
+  els.requestInferenceBtn.disabled = true;
+  resetRunView();
+  try {
+    const response = await api("/api/inference/source", {
+      method: "POST",
+      body: JSON.stringify({
+        source_id: sourceId,
+        scenario: els.scenarioSelect.value,
+      }),
+    });
+    syncLatestFrameFromState(response);
+    renderState(response);
+    showToast("Backend allowlisted source inference response received.");
+  } catch (error) {
+    resetFrameUi();
+    setHealth("camera", "BLOCKED", "UNVERIFIED");
+    setHealth("sima", "BLOCKED", "UNVERIFIED");
+    setHealth("mla", "BLOCKED", "UNVERIFIED");
+    showToast(`Remote source inference fail-closed: ${error.message}`, true);
+  } finally {
+    els.requestInferenceBtn.disabled = false;
+  }
+}
+
+function syncLatestFrameFromState(state) {
+  const trace = state?.current || state;
+  const frameSource = trace?.frame_source || trace?.inference?.source || null;
+  if (!frameSource?.frame_id || !frameSource?.source_id) return;
+  latestFrame = {
+    frameId: String(frameSource.frame_id),
+    sourceId: String(frameSource.source_id),
+    capturedAt: frameSource.captured_at || trace?.inference?.captured_at || null,
+    previewOnly: false,
+    width: frameSource.width,
+    height: frameSource.height,
+  };
+  els.frameId.textContent = `frame: ${latestFrame.frameId}`;
+  sourceLabels[latestFrame.sourceId] = sourceLabel(latestFrame.sourceId);
 }
 
 function renderCatalog(catalog) {
@@ -484,6 +602,41 @@ function renderCatalog(catalog) {
 
   const physical = catalog?.physical_io || {};
   setHealth("io", physical.status || "BLOCKED", physical.truth || "UNVERIFIED");
+}
+
+function renderCameraSources(catalog) {
+  latestCameraCatalog = catalog || {};
+  const previous = els.sourceSelect.value || "laptop-webcam";
+  const sources = Array.isArray(catalog?.sources) ? [...catalog.sources] : [];
+  if (!sources.some((source) => source.source_id === "laptop-webcam")) {
+    sources.unshift({
+      source_id: "laptop-webcam",
+      label: "Laptop webcam",
+      kind: "LAPTOP_WEBCAM",
+      status: "READY",
+      truth: "UNVERIFIED",
+    });
+  }
+
+  els.sourceSelect.innerHTML = "";
+  for (const source of sources) {
+    if (!source?.source_id) continue;
+    sourceLabels[source.source_id] = humanize(source.label || source.source_id).toUpperCase();
+    const option = document.createElement("option");
+    option.value = source.source_id;
+    option.textContent = `${sourceLabels[source.source_id]} / ${normalizeStatus(source.status)}`;
+    option.dataset.kind = source.kind || "";
+    option.dataset.status = normalizeStatus(source.status);
+    option.dataset.truth = normalizeTruth(source.truth);
+    option.disabled = normalizeStatus(source.status) === "OFFLINE";
+    els.sourceSelect.appendChild(option);
+  }
+
+  if ([...els.sourceSelect.options].some((option) => option.value === previous && !option.disabled)) {
+    els.sourceSelect.value = previous;
+  } else {
+    els.sourceSelect.value = "laptop-webcam";
+  }
 }
 
 function resetStages() {
@@ -537,14 +690,19 @@ function renderStages(stages = [], trace = null) {
 
 function renderBackendTelemetry(payload) {
   const sima = payload?.sima || payload?.runtime || payload?.inference || {};
-  const truth = normalizeTruth(sima.truth || payload?.inference_truth || payload?.truth);
+  const truth = normalizeTruth(
+    sima.truth ||
+      sima.inference_truth ||
+      payload?.inference_truth ||
+      (typeof payload?.truth === "string" ? payload.truth : payload?.truth?.detections),
+  );
   const liveTruth = truth === "REAL" || truth === "MEASURED";
   els.runtimeBadge.textContent = truth;
   els.simaModel.textContent = liveTruth ? humanize(sima.model || payload?.model) : "Not provided";
   els.simaRuntime.textContent = liveTruth ? humanize(sima.runtime || sima.runtime_id || payload?.runtime_id) : "Not provided";
   els.simaDevice.textContent = liveTruth ? humanize(sima.device || sima.target || payload?.device) : "Not provided";
-  els.simaLatency.textContent = liveTruth ? formatMs(sima.latency_ms ?? payload?.latency_ms) : "Not provided";
-  els.simaFps.textContent = liveTruth ? formatFps(sima.fps ?? payload?.fps) : "Not provided";
+  els.simaLatency.textContent = liveTruth ? formatMs(sima.telemetry?.latency_ms ?? sima.latency_ms ?? payload?.latency_ms) : "Not provided";
+  els.simaFps.textContent = liveTruth ? formatFps(sima.telemetry?.fps ?? sima.fps ?? payload?.fps) : "Not provided";
 
   const status = liveTruth ? "READY" : "BLOCKED";
   setHealth("sima", sima.status || status, truth);
@@ -576,9 +734,14 @@ function renderReceipt(evidence, trace, framePayload = null) {
       traceTruth.detections,
   );
   const physicalTruth = normalizeTruth(traceTruth.physical_io || evidence?.truth?.physical_io);
-  const frameText = latestFrame
-    ? `${sourceLabels[latestFrame.sourceId] || latestFrame.sourceId} / ${latestFrame.frameId}`
-    : humanize(framePayload?.frame_id || framePayload?.frame_ref || trace?.frame_ref, "UNVERIFIED");
+  const receiptPayload = framePayload || trace || {};
+  const receiptFrame = frameRefFromPayload(receiptPayload);
+  const receiptSource = sourceRefFromPayload(receiptPayload);
+  const frameText = receiptFrame && receiptSource
+    ? `${sourceLabel(String(receiptSource))} / ${receiptFrame}`
+    : latestFrame
+      ? `${sourceLabel(latestFrame.sourceId)} / ${latestFrame.frameId}`
+      : humanize(framePayload?.frame_id || framePayload?.frame_ref || trace?.frame_ref, "UNVERIFIED");
 
   els.receiptFrame.textContent = frameText;
   els.receiptSima.textContent = simaTruth;
@@ -637,12 +800,14 @@ function renderState(state) {
   latestState = state || {};
   const trace = latestState.current || null;
   const evidence = latestState.latest_evidence || null;
+  syncLatestFrameFromState(latestState);
   setHealth("guardian", trace ? trace.status : "READY", "UNVERIFIED");
   renderLifecycle(trace);
   renderReceipt(evidence, trace);
   renderStages(trace?.stages || [], trace);
 
   if (!trace) {
+    resetInferenceTelemetry();
     els.traceId.textContent = "No active trace";
     els.policyBadge.textContent = "Fail-closed";
     els.approvalState.textContent = "NO ACTION PENDING";
@@ -753,11 +918,7 @@ async function decide(path) {
 async function resetDemo() {
   try {
     const state = await api("/api/demo/reset", { method: "POST", body: "{}" });
-    latestFrame = null;
-    els.frameId.textContent = "frame: none";
-    els.inferenceFrameTruth.textContent = "UNVERIFIED";
-    els.frameMatch.textContent = "UNVERIFIED";
-    clearOverlay();
+    resetRunView();
     renderState(state);
     showToast("Demo reset. Local preview state is unchanged; backend truth cleared.");
   } catch (error) {
@@ -783,15 +944,25 @@ async function boot() {
   renderSourceMode();
   resetStages();
   try {
-    const [catalog, state] = await Promise.all([api("/api/catalog"), api("/api/state")]);
+    const [catalog, cameraCatalog, state] = await Promise.all([
+      api("/api/catalog"),
+      api("/api/camera/sources"),
+      api("/api/state"),
+    ]);
     renderCatalog(catalog);
+    renderCameraSources(cameraCatalog || catalog?.camera_sources);
+    renderSourceMode();
+    syncLatestFrameFromState(state);
     renderState(state);
   } catch (error) {
     markBackendOffline(error);
   }
 }
 
-els.sourceSelect.addEventListener("change", renderSourceMode);
+els.sourceSelect.addEventListener("change", () => {
+  resetRunView();
+  renderSourceMode();
+});
 els.mediaFileInput.addEventListener("change", handleLocalFile);
 els.startCameraBtn.addEventListener("click", startLocalPreview);
 els.captureFrameBtn.addEventListener("click", captureFrame);

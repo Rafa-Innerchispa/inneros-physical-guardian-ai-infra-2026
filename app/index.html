@@ -21,7 +21,6 @@
           <span>Source</span>
           <select id="sourceSelect">
             <option value="laptop-webcam">LAPTOP WEBCAM</option>
-            <option value="remote-home-camera">REMOTE HOME CAMERA</option>
             <option value="local-prerecorded">LOCAL PRERECORDED</option>
           </select>
         </label>
@@ -87,7 +86,7 @@
         </div>
 
         <div class="preview-shell">
-          <video id="localVideo" autoplay muted playsinline></video>
+          <video id="cameraVideo" autoplay muted playsinline></video>
           <img id="prerecordedPreview" class="hidden" alt="Local prerecorded preview" />
           <canvas id="captureCanvas" class="hidden" width="1280" height="720"></canvas>
           <canvas id="overlayCanvas" width="1280" height="720" aria-label="Backend detection overlay"></canvas>
@@ -116,7 +115,7 @@
 
         <div class="boundary-note">
           <strong>Boundary:</strong>
-          <span>Browser preview is never SiMa truth. Bounding boxes render only from backend detections tied to this frame/source.</span>
+          <span>CAMERA PREVIEW != SiMa PROOF. Bounding boxes render only from backend detections tied to this frame/source.</span>
         </div>
       </article>
 
@@ -243,7 +242,7 @@
           <div><dt>Policy decision</dt><dd id="receiptDecision">No decision</dd></div>
           <div><dt>Approval state</dt><dd id="receiptApproval">No action pending</dd></div>
           <div><dt>Physical action</dt><dd id="receiptAction">Nothing executed</dd></div>
-          <div><dt>Verification</dt><dd id="receiptVerification">Not verified</dd></div>
+          <div><dt>Verification</dt><dd id="receiptReadback">Not verified</dd></div>
           <div><dt>Evidence seal</dt><dd id="receiptSeal">Not sealed</dd></div>
         </dl>
 
