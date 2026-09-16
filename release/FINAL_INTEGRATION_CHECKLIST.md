@@ -64,6 +64,87 @@ Required checks:
 - `git diff --check`
 - safe loopback HTTP smoke only; no hardware-destructive or strict-live command from the QA laptop.
 
+## FINAL QA GATE — execute only on A's new published SHA
+
+Do **not** run this acceptance against `8358622374dbb9ef62e7d6cf8a805b5aadf51036`. Replace the placeholder only after A publishes a different 40-character remote SHA and the exact signal `READY_FOR_HARDWARE_VALIDATION`.
+
+### Exact checkout and identity commands
+
+Run in PowerShell:
+
+```powershell
+$aSha = '<NEW_40_CHARACTER_A_SHA>'
+$aRemoteRef = 'refs/heads/codex/sima-final-live-console-20260915'
+$qaRoot = "C:\WINDOWS\system32\guardian-final-qa-$($aSha.Substring(0, 12))"
+$qaPytestDeps = 'C:\Users\hrlg\codex-sima-work\inneros-physical-guardian-ai-infra-2026\.test-deps'
+
+if ($aSha -eq '8358622374dbb9ef62e7d6cf8a805b5aadf51036') { throw 'Refusing final QA on old baseline' }
+if ($aSha -notmatch '^[0-9a-f]{40}$') { throw 'A SHA must be exactly 40 lowercase hex characters' }
+
+git fetch origin codex/sima-final-live-console-20260915
+$remoteSha = ((git ls-remote origin $aRemoteRef) -split '\s+')[0]
+if ($remoteSha -ne $aSha) { throw "Published ref mismatch: expected $aSha, got $remoteSha" }
+
+git cat-file -e "$aSha^{commit}"
+git merge-base --is-ancestor 8358622374dbb9ef62e7d6cf8a805b5aadf51036 $aSha
+if ($LASTEXITCODE -ne 0) { throw 'A SHA is not a descendant of the frozen baseline' }
+
+git worktree add --detach $qaRoot $aSha
+Set-Location $qaRoot
+git rev-parse HEAD
+git status --short --untracked-files=all
+```
+
+The first and last `git status --short --untracked-files=all` outputs must be empty. The detached HEAD must equal `$aSha`.
+
+### Exact non-hardware commands
+
+```powershell
+$env:PYTHONDONTWRITEBYTECODE = '1'
+$env:PYTHONPYCACHEPREFIX = "$env:TEMP\guardian-final-qa-$($aSha.Substring(0, 12))-pycache"
+
+python --version
+node --version
+
+python -c "import sys; sys.path[:0]=[r'$qaPytestDeps', r'src']; import pytest; raise SystemExit(pytest.main(['--collect-only','-q','-p','no:cacheprovider']))"
+
+python -c "import sys; sys.path[:0]=[r'$qaPytestDeps', r'src']; import pytest; raise SystemExit(pytest.main(['-q','-p','no:cacheprovider','tests/test_sima_adapter.py','tests/test_runtime.py','tests/test_frame_input.py','tests/test_camera_sources.py','tests/test_engine.py','tests/test_server.py','tests/test_physical_io.py','tests/test_sima_live_e2e.py','tests/test_sima_live_evidence_gate.py']))"
+
+python -c "import sys; sys.path[:0]=[r'$qaPytestDeps', r'src']; import pytest; raise SystemExit(pytest.main(['-q','-p','no:cacheprovider','-k','persistent or multiple_frames or invalid_frame or worker_failure or ssh_failure or provenance or low_confidence or confidence_threshold or reject or deny or unknown_physical or missing_physical or oversized or payload_too_large or evidence_receipt or strict_live or fail_closed']))"
+
+python -c "import sys; sys.path[:0]=[r'$qaPytestDeps', r'src']; import pytest; raise SystemExit(pytest.main(['-q','-p','no:cacheprovider']))"
+
+python scripts/self_test.py
+python -m compileall -q src scripts tests
+node --check app/app.js
+git diff --check $aSha^ $aSha
+git diff --check
+git status --short --untracked-files=all
+```
+
+Every command must exit zero. The focused `-k` run must select tests (exit code 5/no tests is `CHANGES_REQUIRED`). `PYTHONDONTWRITEBYTECODE`, `PYTHONPYCACHEPREFIX`, and `-p no:cacheprovider` keep bytecode/cache writes outside the detached checkout.
+
+### Required read-only adversarial checklist
+
+- [ ] **Persistent Modalix worker:** at least three valid frame inferences reuse one established SSH/worker session. Worker/session identity or start counter stays constant; frame/execution IDs remain unique. No per-frame SSH process or PyNeat/model reload is hidden behind a passing response.
+- [ ] **Multiple frames, same session:** sequential frames A/B/C produce three responses tied to their own bytes, IDs, timestamps and source while the same healthy Modalix worker remains alive. No detections or provenance leak between frames.
+- [ ] **Recovery after invalid frame:** a malformed/undecodable/out-of-bounds frame returns a controlled 4xx error without measured truth or detections; the next valid frame succeeds without restarting the service or inheriting the invalid frame's state.
+- [ ] **SSH/worker failure fails closed:** connection refusal, timeout, worker EOF/nonzero exit, malformed worker JSON and unavailable PyNeat/model yield stable unavailable/failed-closed truth. They never emit fixture detections, historical metrics as live, `REAL`, or `MEASURED_SPONSOR_RUNTIME`.
+- [ ] **Frame/source provenance:** request and response bind exact `frame_id`, `source_id`, capture timestamp, inference/execution ID, model/runtime/device identity and evidence correlation. Swapped, replayed, missing or stale frame/source evidence is rejected and clears UI overlay eligibility.
+- [ ] **Confidence below 0.25:** detections at `0.249999` and lower cannot propose or execute an action. Boundary behavior at `0.25` is explicit and policy-owned; NaN, infinity, strings and values outside `[0,1]` reject the detection/response.
+- [ ] **DENY means nothing executed:** rejection returns `REJECTED_SAFE`/not verified/`NOT_EXECUTED`; the PhysicalIO mock records zero action and zero verify calls; later state/evidence cannot relabel the rejected action as approved or verified.
+- [ ] **PhysicalIO unknown/missing is never VERIFIED:** missing truth, unknown truth enum, missing verify response, identity mismatch, timeout or `verified:false` ends `ACTION_FAILED_SAFE`/`FAILED_CLOSED` with `verified:false`. Only matching independent readback may verify.
+- [ ] **Oversized HTTP body is stable:** a body one byte above the documented frame limit returns a deterministic 4xx response (preferably 413) with bounded JSON, no traceback, no hang and no partial inference/action. A subsequent `/api/health` and valid bounded request still work.
+- [ ] **Evidence Receipt provenance:** receipt binds the exact camera/source/frame, capture and inference timestamps, execution ID, Modalix/MLA device/runtime/model identity, validated detections, policy threshold/reason, human decision, physical action identity, readback truth and evidence seal. It never substitutes historical benchmark provenance for current-frame provenance.
+- [ ] **No simulated fallback in strict-live:** fixture sidecar, deterministic scenario, prerecorded inference fixture, static evidence JSON, import fallback and historical benchmark cannot satisfy strict-live. If current Modalix proof is absent, strict-live returns blocked/unverified/failed-closed with no simulated success.
+
+For the HTTP and worker cases, use only loopback mocks/fakes supplied by the test suite. Do not contact or mutate the real DevKit, SSH configuration, network, firmware or Physical I/O hardware from this QA lane.
+
+### Verdict rule
+
+- Report `PASS` only when all commands pass, every checklist item has direct test evidence, the checkout remains clean, and the tested SHA exactly equals A's published SHA.
+- Report `CHANGES_REQUIRED` for any failed command, absent/zero-selected required test, ambiguous truth/provenance, dirty checkout, SHA mismatch or missing evidence. Include exact failing node IDs, command output and contract gap; do not patch `src/*`, `app/*` or `scripts/*`.
+
 ### Adversarial acceptance requirements
 
 - **Fixture → measured rejection:** fixture, prerecorded fallback, mock sidecar, static evidence JSON, or scenario metadata cannot produce `MEASURED_SPONSOR_RUNTIME`. A measured label must be tied to the current inference response and current frame.
