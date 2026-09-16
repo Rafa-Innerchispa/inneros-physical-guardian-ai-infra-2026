@@ -8,7 +8,7 @@
 </head>
 <body>
   <main class="console">
-    <!-- COMPACT MASTHEAD & SYSTEM HEALTH -->
+    <!-- 1. COMPACT MASTHEAD & SYSTEM HEALTH STRIP -->
     <header class="masthead">
       <div class="brand-block">
         <div class="brand-top">
@@ -21,7 +21,7 @@
         </div>
       </div>
 
-      <!-- COMPACT HEALTH STRIP (4 CARDS) -->
+      <!-- SEPARATED 5-CELL HEALTH STRIP (SOURCE, CAMERA, SIMA, GUARDIAN, EVIDENCE) -->
       <section class="health-strip" aria-label="System Health">
         <div class="health-cell" data-health="camera">
           <span>CAMERA</span>
@@ -30,8 +30,13 @@
         </div>
         <div class="health-cell" data-health="sima">
           <span>SiMa MODALIX</span>
-          <strong id="simaHealth">READY</strong>
+          <strong id="simaHealth">OFFLINE</strong>
           <small id="simaTruth">UNVERIFIED</small>
+        </div>
+        <div class="health-cell" data-health="identity">
+          <span>IDENTITY</span>
+          <strong id="identityHealth">READY</strong>
+          <small id="identityTruth">UNKNOWN</small>
         </div>
         <div class="health-cell" data-health="guardian">
           <span>GUARDIAN</span>
@@ -43,16 +48,16 @@
           <strong id="evidenceHealth">READY</strong>
           <small id="evidenceTruth">UNVERIFIED</small>
         </div>
-        <!-- Hidden health cell for test compatibility -->
+        <!-- Hidden health cell for test runner backward compatibility -->
         <div class="health-cell hidden" data-health="mla">
           <span>MLA RUNTIME</span>
-          <strong id="mlaHealth">READY</strong>
+          <strong id="mlaHealth">OFFLINE</strong>
           <small id="mlaTruth">UNVERIFIED</small>
         </div>
       </section>
     </header>
 
-    <!-- SOURCE CARDS & DEMO TRIGGER CONTROL BAR -->
+    <!-- 2. LAYER 1: SOURCE SELECTOR & DEMO TRIGGER CONTROL BAR -->
     <section class="source-control-bar">
       <div class="source-cards-group">
         <span class="bar-label">SOURCE:</span>
@@ -77,7 +82,6 @@
             <small class="src-status gye" id="gyeCh3Status">GUAYAQUIL • READY</small>
           </div>
         </button>
-        <!-- Retained select for contract & custom sources -->
         <select id="sourceSelect" class="hidden-select" aria-label="Camera source select">
           <option value="laptop-webcam">LAPTOP WEBCAM</option>
           <option value="local-prerecorded">LOCAL PRERECORDED</option>
@@ -99,13 +103,13 @@
       </div>
     </section>
 
-    <!-- MAIN 60 / 40 WORKSPACE GRID -->
+    <!-- 3. MAIN WORKSPACE: 60% CAMERA FEED / 40% REASONING & PROOF -->
     <section class="main-workspace-grid">
-      <!-- LEFT COLUMN (60%): CAMERA / LIVE VIEW -->
+      <!-- LEFT COLUMN: LAYER 2 - CAMERA FEED VIEWPORT -->
       <article class="camera-workspace-card" id="camera-section">
         <div class="card-head">
           <div class="card-title-group">
-            <span class="section-kicker">LIVE PERCEPTION FEED</span>
+            <span class="section-kicker">LAYER 2 • CAMERA FEED</span>
             <h2 id="cameraHeading">LAPTOP WEBCAM • LIVE PREVIEW</h2>
           </div>
           
@@ -121,18 +125,18 @@
           </div>
         </div>
 
-        <!-- REMOTE PROVENANCE BANNER (WHEN GYE CH2/CH3 SELECTED) -->
+        <!-- REMOTE INFRA PROVENANCE BANNER -->
         <div class="remote-infra-banner hidden" id="remoteInfraBanner">
           <div class="infra-dot pulse"></div>
           <div class="infra-details">
-            <strong>GUAYAQUIL, ECUADOR (PC DOCTOR LAB) → SAN FRANCISCO HOST → SiMa MODALIX → GUARDIAN</strong>
-            <p>Live Dahua DVR stream routed securely over private Tailscale tunnel (AMD .5 node → SF host → SiMa DevKit EV74 MLSoC).</p>
+            <strong>GUAYAQUIL, ECUADOR → TAILSCALE PROXY (127.0.0.1:8791) → SAN FRANCISCO HOST → SiMa MODALIX</strong>
+            <p>Live Dahua DVR stream routed securely over authenticated private Tailscale bridge without browser credentials.</p>
           </div>
         </div>
 
         <div class="preview-shell">
           <video id="cameraVideo" autoplay muted playsinline></video>
-          <img id="prerecordedPreview" class="hidden" alt="Local prerecorded preview" />
+          <img id="prerecordedPreview" class="hidden" alt="Camera snapshot preview" />
           <canvas id="captureCanvas" class="hidden" width="1280" height="720"></canvas>
           <canvas id="overlayCanvas" width="1280" height="720" aria-label="Backend detection overlay"></canvas>
           <div class="preview-fail" id="previewFail">
@@ -144,8 +148,8 @@
             <span id="frameId">frame: none</span>
           </div>
           <div class="preview-label top-right">
-            <strong>INFERENCE TRUTH</strong>
-            <span id="inferenceFrameTruth">UNVERIFIED</span>
+            <strong>SiMa INFERENCE</strong>
+            <span id="inferenceFrameTruth">OFFLINE / UNVERIFIED</span>
           </div>
         </div>
 
@@ -154,7 +158,6 @@
             <strong>Boundary:</strong>
             <span>CAMERA PREVIEW != SiMa PROOF. Bounding boxes render only from backend detections tied to this frame/source.</span>
           </div>
-          <!-- MANUAL CONTROLS ACCORDION -->
           <details class="advanced-controls" id="advancedControlsDrawer">
             <summary><span>⚙ Manual Controls</span></summary>
             <div class="camera-controls">
@@ -170,9 +173,67 @@
         </div>
       </article>
 
-      <!-- RIGHT COLUMN (40%): HARDWARE PROOF + GUARDIAN ACTION GATE + EVIDENCE SUMMARY -->
+      <!-- RIGHT COLUMN: LAYERS 3-7 (SiMa, WHAT SiMa SAW, IDENTITY, GUARDIAN, EVIDENCE) -->
       <aside class="right-stack-column">
-        <!-- 1. REAL HARDWARE PROOF CARD (COMPACT 2-ROW) -->
+        <!-- LAYER 3 & 4 & 5: PERCEPTION & ENRICHMENT BREAKDOWN -->
+        <article class="truth-breakdown-card" id="truthBreakdownCard">
+          <div class="card-head-compact">
+            <span class="proof-badge">LAYERS 3, 4, 5 • PERCEPTION & IDENTITY</span>
+            <span class="provenance-chip" id="simaStatusChip">OFFLINE</span>
+          </div>
+
+          <div class="three-tier-container">
+            <!-- LAYER 3: SiMa HARDWARE STATUS -->
+            <div class="tier-block">
+              <div class="tier-header">
+                <span class="tier-tag">LAYER 3: SiMa MODALIX</span>
+                <span class="tier-state unverified" id="tierSimaState">OFFLINE / UNVERIFIED</span>
+              </div>
+              <div class="tier-content" id="tierSimaContent">
+                <div class="offline-sima-notice" id="simaOfflineNotice">
+                  <p>Configured Target: <strong>SiMa.ai Modalix EV74 (192.168.1.20)</strong></p>
+                  <p>Latency: <strong>---</strong> | Detections: <strong>none / not run</strong> | Execution: <strong>unavailable</strong></p>
+                </div>
+              </div>
+            </div>
+
+            <!-- LAYER 4: WHAT SiMa SAW -->
+            <div class="tier-block">
+              <div class="tier-header">
+                <span class="tier-tag">LAYER 4: WHAT SiMa SAW</span>
+                <span class="tier-state unverified" id="tierSawState">NOT RUN</span>
+              </div>
+              <div class="tier-content">
+                <div class="live-sima-detections hidden" id="simaLiveDetections">
+                  <div class="sima-detections-list" id="simaDetectionsList"></div>
+                  <div class="sima-telemetry-micro">
+                    <span>Latency: <strong id="tierSimaLatency">---</strong></span>
+                    <span>Throughput: <strong id="tierSimaFps">---</strong></span>
+                  </div>
+                </div>
+                <div class="not-run-notice" id="sawNotRunNotice">
+                  <span>No backend detections for current frame (SiMa offline).</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- LAYER 5: IDENTITY / ENRICHMENT -->
+            <div class="tier-block">
+              <div class="tier-header">
+                <span class="tier-tag">LAYER 5: IDENTITY / ENRICHMENT</span>
+                <span class="tier-state local" id="tierIdentityState">UNKNOWN / UNVERIFIED</span>
+              </div>
+              <div class="tier-content" id="tierIdentityContent">
+                <div class="identity-profile-box" id="identityProfileBox">
+                  <strong id="identityMainLabel">UNKNOWN / NOT VERIFIED</strong>
+                  <p id="identitySubText">Fail-closed invariant: Person and Pet detections remain UNKNOWN without verified local biometric embedding match.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- REAL HARDWARE PROOF TELEMETRY -->
         <article class="hero-proof-card" id="hardwareHeroCard">
           <div class="card-head-compact">
             <span class="proof-badge">REAL HARDWARE PROOF</span>
@@ -202,11 +263,11 @@
           </div>
         </article>
 
-        <!-- 2. GUARDIAN DECISION & ACTION GATE -->
+        <!-- LAYER 6: GUARDIAN DECISION & ACTION GATE -->
         <article class="action-gate-card" id="decision-gate">
           <div class="card-head-compact">
             <div class="gate-title-group">
-              <span class="section-kicker">SAFETY GOVERNANCE</span>
+              <span class="section-kicker">LAYER 6 • SAFETY GOVERNANCE</span>
               <h3>Guardian Action Gate</h3>
             </div>
             <span class="policy-badge" id="policyBadge">Fail-closed</span>
@@ -274,11 +335,11 @@
           </div>
         </article>
 
-        <!-- 3. EVIDENCE SUMMARY RECEIPT -->
+        <!-- LAYER 7: EVIDENCE SUMMARY RECEIPT -->
         <article class="evidence-summary-card" id="evidence-section">
           <div class="card-head-compact">
             <div class="gate-title-group">
-              <span class="section-kicker">PROVE</span>
+              <span class="section-kicker">LAYER 7 • PROVE</span>
               <h3>Evidence Receipt</h3>
             </div>
             <button class="secondary-btn small" id="copyEvidenceBtn" type="button">Copy JSON</button>
@@ -288,6 +349,7 @@
             <div class="r-row"><span class="r-k">Frame / Source:</span><strong class="r-v" id="receiptFrame">UNVERIFIED</strong></div>
             <div class="r-row"><span class="r-k">SiMa Truth:</span><strong class="r-v" id="receiptSima">UNVERIFIED</strong></div>
             <div class="r-row"><span class="r-k">Detections:</span><strong class="r-v" id="receiptDetections">No backend detections</strong></div>
+            <div class="r-row"><span class="r-k">Identity:</span><strong class="r-v" id="receiptIdentity">Unverified / None</strong></div>
             <div class="r-row"><span class="r-k">Policy Decision:</span><strong class="r-v" id="receiptDecision">No decision</strong></div>
             <div class="r-row"><span class="r-k">Approval State:</span><strong class="r-v" id="receiptApproval">No action pending</strong></div>
             <div class="r-row"><span class="r-k">Physical Action:</span><strong class="r-v" id="receiptAction">Nothing executed</strong></div>

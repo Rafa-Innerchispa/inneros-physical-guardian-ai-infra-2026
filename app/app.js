@@ -50,6 +50,8 @@ const els = {
   cameraTruth: $("cameraTruth"),
   simaHealth: $("simaHealth"),
   simaTruth: $("simaTruth"),
+  identityHealth: $("identityHealth"),
+  identityTruth: $("identityTruth"),
   mlaHealth: $("mlaHealth"),
   mlaTruth: $("mlaTruth"),
   guardianHealth: $("guardianHealth"),
@@ -83,6 +85,7 @@ const els = {
   receiptFrame: $("receiptFrame"),
   receiptSima: $("receiptSima"),
   receiptDetections: $("receiptDetections"),
+  receiptIdentity: $("receiptIdentity"),
   receiptDecision: $("receiptDecision"),
   receiptApproval: $("receiptApproval"),
   receiptAction: $("receiptAction"),
@@ -99,6 +102,20 @@ const els = {
   filterAllDetections: $("filterAllDetections"),
   policyCount: $("policyCount"),
   totalCount: $("totalCount"),
+  // Layered Breakdown Elements
+  simaStatusChip: $("simaStatusChip"),
+  tierSimaState: $("tierSimaState"),
+  simaOfflineNotice: $("simaOfflineNotice"),
+  simaLiveDetections: $("simaLiveDetections"),
+  simaDetectionsList: $("simaDetectionsList"),
+  tierSawState: $("tierSawState"),
+  sawNotRunNotice: $("sawNotRunNotice"),
+  tierSimaLatency: $("tierSimaLatency"),
+  tierSimaFps: $("tierSimaFps"),
+  tierIdentityState: $("tierIdentityState"),
+  identityProfileBox: $("identityProfileBox"),
+  identityMainLabel: $("identityMainLabel"),
+  identitySubText: $("identitySubText"),
 };
 
 // Contract markers for test runner compatibility
@@ -118,17 +135,6 @@ let currentOverlayFilter = "POLICY_RELEVANT"; // "POLICY_RELEVANT" or "ALL"
 let lastDetectionsData = [];
 let lastDetectionsPayload = null;
 let lastSubmittedFrameId = null;
-
-const stageOrder = [
-  "SEE",
-  "PERCEIVE",
-  "UNDERSTAND",
-  "POLICY",
-  "HUMAN_APPROVAL",
-  "ACTION",
-  "VERIFY",
-  "PROVE",
-];
 
 const scenarioCopy = {
   loitering_after_hours:
@@ -185,6 +191,7 @@ function setHealth(component, state, truth) {
   const badgeMap = {
     camera: [els.cameraHealth, els.cameraTruth],
     sima: [els.simaHealth, els.simaTruth],
+    identity: [els.identityHealth, els.identityTruth],
     mla: [els.mlaHealth, els.mlaTruth],
     guardian: [els.guardianHealth, els.guardianTruth],
     evidence: [els.evidenceHealth, els.evidenceTruth],
@@ -235,11 +242,92 @@ function detectionFrameMatches(payload) {
 function extractDetections(traceOrPayload) {
   if (!traceOrPayload) return [];
   return (
+    traceOrPayload?.enriched_detections ||
     traceOrPayload?.detections ||
+    traceOrPayload?.inference?.enriched_detections ||
     traceOrPayload?.inference?.detections ||
+    traceOrPayload?.current?.inference?.enriched_detections ||
     traceOrPayload?.current?.inference?.detections ||
     []
   );
+}
+
+function renderLayeredBreakdown(payload, detections) {
+  const isMeasured = Boolean(
+    payload?.sima_telemetry?.truth === "MEASURED" ||
+    payload?.truth?.detections === "MEASURED" ||
+    payload?.current?.truth?.detections === "MEASURED" ||
+    payload?.inference_truth === "MEASURED"
+  );
+
+  // Layer 3: SiMa Status
+  if (els.simaStatusChip) {
+    els.simaStatusChip.textContent = isMeasured ? "MEASURED" : "OFFLINE";
+    els.simaStatusChip.className = `provenance-chip ${isMeasured ? "" : "chip-blocked"}`;
+  }
+  if (els.tierSimaState) {
+    els.tierSimaState.textContent = isMeasured ? "READY / MEASURED" : "OFFLINE / UNVERIFIED";
+    els.tierSimaState.className = `tier-state ${isMeasured ? "measured" : "offline"}`;
+  }
+
+  // Layer 4: WHAT SiMa SAW
+  if (isMeasured && detections && detections.length > 0) {
+    if (els.tierSawState) {
+      els.tierSawState.textContent = `${detections.length} OBJECT(S) DETECTED`;
+      els.tierSawState.className = "tier-state measured";
+    }
+    if (els.sawNotRunNotice) els.sawNotRunNotice.classList.add("hidden");
+    if (els.simaLiveDetections) els.simaLiveDetections.classList.remove("hidden");
+
+    if (els.simaDetectionsList) {
+      els.simaDetectionsList.innerHTML = "";
+      for (const d of detections) {
+        const chip = document.createElement("div");
+        chip.className = "detection-tag-chip";
+        const objName = (d.object_class || d.class || d.label || "object").toUpperCase();
+        const conf = typeof d.confidence === "number" ? `${(d.confidence * 100).toFixed(1)}%` : "";
+        chip.innerHTML = `<strong>${objName}</strong><span>${conf}</span>`;
+        els.simaDetectionsList.appendChild(chip);
+      }
+    }
+
+    const tel = payload?.sima_telemetry || payload?.current?.inference?.telemetry || {};
+    if (els.tierSimaLatency) els.tierSimaLatency.textContent = tel.latency_ms ? `${tel.latency_ms.toFixed(2)} ms` : "---";
+    if (els.tierSimaFps) els.tierSimaFps.textContent = tel.fps ? `${tel.fps.toFixed(1)} FPS` : (tel.latency_ms ? `${(1000 / tel.latency_ms).toFixed(1)} FPS` : "---");
+  } else {
+    if (els.tierSawState) {
+      els.tierSawState.textContent = "NOT RUN";
+      els.tierSawState.className = "tier-state offline";
+    }
+    if (els.sawNotRunNotice) els.sawNotRunNotice.classList.remove("hidden");
+    if (els.simaLiveDetections) els.simaLiveDetections.classList.add("hidden");
+  }
+
+  // Layer 5: Identity / Enrichment (Fail-closed: UNKNOWN PERSON / UNKNOWN PET)
+  let identitySummary = "UNKNOWN / NOT VERIFIED";
+  let identityFound = false;
+
+  if (isMeasured && detections && detections.length > 0) {
+    const personDet = detections.find((d) => (d.object_class || d.class || d.label || "").toLowerCase() === "person");
+    const petDet = detections.find((d) => ["dog", "cat"].includes((d.object_class || d.class || d.label || "").toLowerCase()));
+
+    if (personDet) {
+      identityFound = true;
+      identitySummary = "UNKNOWN PERSON (Fail-closed: No live face embedding model active)";
+    } else if (petDet) {
+      identityFound = true;
+      const petClass = (petDet.object_class || petDet.class || petDet.label).toUpperCase();
+      identitySummary = `UNKNOWN ${petClass} (Fail-closed: No live pet ReID model active)`;
+    }
+  }
+
+  if (els.identityMainLabel) els.identityMainLabel.textContent = identitySummary;
+  if (els.tierIdentityState) {
+    els.tierIdentityState.textContent = identityFound ? "UNKNOWN (FAIL-CLOSED)" : "UNVERIFIED";
+  }
+  if (els.receiptIdentity) {
+    els.receiptIdentity.textContent = identityFound ? identitySummary : "Unverified / Awaiting Inference";
+  }
 }
 
 function drawDetections(detections, payload) {
@@ -247,8 +335,10 @@ function drawDetections(detections, payload) {
   lastDetectionsPayload = payload;
   clearOverlay();
 
+  renderLayeredBreakdown(payload, detections);
+
   if (!detections.length || !detectionFrameMatches(payload)) {
-    els.inferenceFrameTruth.textContent = "UNVERIFIED";
+    els.inferenceFrameTruth.textContent = "OFFLINE / UNVERIFIED";
     els.frameMatch.textContent = "UNVERIFIED";
     if (els.policyCount) els.policyCount.textContent = "0";
     if (els.totalCount) els.totalCount.textContent = "0";
@@ -257,8 +347,8 @@ function drawDetections(detections, payload) {
 
   const totalDetections = detections.length;
   const policyRelevant = detections.filter((d) => {
-    const lbl = (d.label || d.class || "").toLowerCase();
-    return lbl.includes("person") || lbl.includes("car") || lbl.includes("truck") || lbl.includes("backpack");
+    const lbl = (d.label || d.class || d.object_class || "").toLowerCase();
+    return lbl.includes("person") || lbl.includes("dog") || lbl.includes("cat") || lbl.includes("car");
   });
 
   if (els.policyCount) els.policyCount.textContent = String(policyRelevant.length);
@@ -270,32 +360,36 @@ function drawDetections(detections, payload) {
   const width = els.overlayCanvas.width;
   const height = els.overlayCanvas.height;
   ctx.lineWidth = 3;
-  ctx.font = "700 16px ui-monospace, Consolas, monospace";
+  ctx.font = "700 15px ui-monospace, Consolas, monospace";
 
   for (const detection of displayList) {
-    const [rawX, rawY, rawW, rawH] = detection.bbox.map(Number);
+    const rawBbox = detection.bbox || [0, 0, 1, 1];
+    const [rawX, rawY, rawW, rawH] = rawBbox.map(Number);
     if (![rawX, rawY, rawW, rawH].every(Number.isFinite)) continue;
     const normalized = rawX <= 1 && rawY <= 1 && rawW <= 1 && rawH <= 1;
     const x = normalized ? rawX * width : rawX;
     const y = normalized ? rawY * height : rawY;
     const w = normalized ? rawW * width : rawW;
     const h = normalized ? rawH * height : rawH;
-    const label = humanize(detection.label || detection.class || "object", "object").toUpperCase();
+    const objClass = (detection.object_class || detection.label || detection.class || "object").toUpperCase();
     const confidence =
       typeof detection.confidence === "number" && Number.isFinite(detection.confidence)
         ? ` ${(detection.confidence * 100).toFixed(1)}%`
         : "";
 
-    const isPerson = label.includes("PERSON");
-    ctx.strokeStyle = isPerson ? "#38bdf8" : "#2dd4bf";
+    const fullTag = `${objClass}${confidence}`;
+
+    const isPerson = objClass.includes("PERSON");
+    const isPet = objClass.includes("DOG") || objClass.includes("CAT");
+    ctx.strokeStyle = isPerson ? "#38bdf8" : (isPet ? "#a78bfa" : "#2dd4bf");
     ctx.fillStyle = isPerson ? "rgba(56, 189, 248, 0.15)" : "rgba(45, 212, 191, 0.12)";
     ctx.strokeRect(x, y, w, h);
 
-    const pillWidth = Math.max(140, ctx.measureText(label + confidence).width + 16);
+    const pillWidth = Math.max(120, ctx.measureText(fullTag).width + 16);
     ctx.fillStyle = "rgba(4, 19, 15, 0.9)";
     ctx.fillRect(x, Math.max(0, y - 24), pillWidth, 24);
-    ctx.fillStyle = isPerson ? "#38bdf8" : "#2dd4bf";
-    ctx.fillText(label + confidence, x + 6, Math.max(16, y - 6));
+    ctx.fillStyle = isPerson ? "#38bdf8" : (isPet ? "#a78bfa" : "#2dd4bf");
+    ctx.fillText(fullTag, x + 6, Math.max(16, y - 6));
   }
 
   const rawTruth = payload?.truth || payload?.inference_truth || payload?.sima?.truth || null;
@@ -318,9 +412,9 @@ function updateSourceButtons(sourceId) {
 
   if (els.cameraHeading) {
     if (sourceId === "gye-dahua-ch2") {
-      els.cameraHeading.textContent = "GUAYAQUIL, ECUADOR — EXISTING DAHUA CH2 (VIA TAILSCALE)";
+      els.cameraHeading.textContent = "GUAYAQUIL, ECUADOR — DAHUA DVR CH2 (FRONT ENTRY VIA TAILSCALE)";
     } else if (sourceId === "gye-dahua-ch3") {
-      els.cameraHeading.textContent = "GUAYAQUIL, ECUADOR — EXISTING DAHUA CH3 (VIA TAILSCALE)";
+      els.cameraHeading.textContent = "GUAYAQUIL, ECUADOR — DAHUA DVR CH3 (HOME LAB INTERIOR VIA TAILSCALE)";
     } else {
       els.cameraHeading.textContent = "LAPTOP WEBCAM • LIVE LOCAL FEED";
     }
@@ -329,6 +423,8 @@ function updateSourceButtons(sourceId) {
   if (els.sourceLabel) {
     els.sourceLabel.textContent = sourceId.toUpperCase();
   }
+
+  renderLayeredBreakdown(null, []);
 }
 
 function renderCameraSources(sources) {
@@ -338,27 +434,28 @@ function renderCameraSources(sources) {
   if (els.sourceSelect) {
     els.sourceSelect.innerHTML = "";
     for (const src of sources) {
+      const srcId = src.source_id || src.id;
       const opt = document.createElement("option");
-      opt.value = src.id;
-      opt.textContent = `${src.label.toUpperCase()} (${src.status.toUpperCase()})`;
+      opt.value = srcId;
+      opt.textContent = `${(src.label || srcId).toUpperCase()} (${(src.status || "ready").toUpperCase()})`;
       els.sourceSelect.appendChild(opt);
     }
     els.sourceSelect.value = activeSourceId;
   }
 
-  const ch2 = sources.find((s) => s.id === "gye-dahua-ch2");
-  const ch3 = sources.find((s) => s.id === "gye-dahua-ch3");
+  const ch2 = sources.find((s) => (s.source_id || s.id) === "gye-dahua-ch2");
+  const ch3 = sources.find((s) => (s.source_id || s.id) === "gye-dahua-ch3");
 
   const ch2StatusEl = $("gyeCh2Status");
   if (ch2StatusEl && ch2) {
-    ch2StatusEl.textContent = `GUAYAQUIL • ${ch2.status.toUpperCase()}`;
-    ch2StatusEl.className = `src-status ${ch2.status === "ready" ? "gye" : "blocked"}`;
+    ch2StatusEl.textContent = `GUAYAQUIL • ${(ch2.status || "ready").toUpperCase()}`;
+    ch2StatusEl.className = `src-status ${ch2.status === "blocked" ? "blocked" : "gye"}`;
   }
 
   const ch3StatusEl = $("gyeCh3Status");
   if (ch3StatusEl && ch3) {
-    ch3StatusEl.textContent = `GUAYAQUIL • ${ch3.status.toUpperCase()}`;
-    ch3StatusEl.className = `src-status ${ch3.status === "ready" ? "gye" : "blocked"}`;
+    ch3StatusEl.textContent = `GUAYAQUIL • ${(ch3.status || "ready").toUpperCase()}`;
+    ch3StatusEl.className = `src-status ${ch3.status === "blocked" ? "blocked" : "gye"}`;
   }
 }
 
@@ -380,7 +477,7 @@ function renderReceipt(evidence, trace) {
   els.receiptReadback.textContent = isVerified ? "VERIFIED (READBACK ACCEPTED)" : "Not verified (no hardware relay attached)";
   els.receiptReadback.className = `r-v ${isVerified ? "chip-measured" : "chip-blocked"}`;
 
-  els.receiptSeal.textContent = evidence?.seal_id || "Not sealed";
+  els.receiptSeal.textContent = evidence?.seal_id || evidence?.evidence_id || "Not sealed";
   els.evidencePreview.textContent = JSON.stringify(evidence || { note: "Awaiting execution trace." }, null, 2);
 }
 
@@ -457,7 +554,7 @@ function resetFrameUi({ clearFrame = true } = {}) {
 
 function resetRunView({ clearFrame = true } = {}) {
   resetFrameUi({ clearFrame });
-  els.inferenceFrameTruth.textContent = "UNVERIFIED";
+  els.inferenceFrameTruth.textContent = "OFFLINE / UNVERIFIED";
   els.frameMatch.textContent = "UNVERIFIED";
   els.receiptFrame.textContent = "UNVERIFIED";
   els.receiptReadback.textContent = "Not verified";
@@ -476,6 +573,7 @@ function resetRunView({ clearFrame = true } = {}) {
     "Guardian will expose a proposed action only after backend policy evaluation. Nothing executes from preview alone.";
   renderHeroHardwareCard(null);
   renderStages([], null);
+  renderLayeredBreakdown(null, []);
 }
 
 function syncLatestFrameFromState(state) {
@@ -503,8 +601,8 @@ function syncLatestFrameFromState(state) {
     setHealth("mla", "READY", "MEASURED");
   } else {
     renderHeroHardwareCard(null);
-    setHealth("sima", "READY", "UNVERIFIED");
-    setHealth("mla", "READY", "UNVERIFIED");
+    setHealth("sima", "OFFLINE", "UNVERIFIED");
+    setHealth("mla", "OFFLINE", "UNVERIFIED");
   }
 }
 
@@ -611,7 +709,42 @@ async function startCamera() {
     console.warn("Camera start failed or permission denied:", err);
     els.previewFail.classList.remove("hidden");
     els.previewFailTitle.textContent = "CAMERA INPUT INACTIVE";
-    els.previewFailText.textContent = "Please allow webcam access or select a GYE camera to run live inference.";
+    els.previewFailText.textContent = "Please allow webcam access or select a GYE camera to view live feed.";
+    setHealth("camera", "OFFLINE", "UNVERIFIED");
+  }
+}
+
+async function fetchRemoteSnapshot(sourceId) {
+  try {
+    showToast(`Fetching real snapshot from Guayaquil (${sourceId})...`);
+    const res = await fetch(`/api/camera/snapshot?source_id=${encodeURIComponent(sourceId)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+
+    if (data.image_base64) {
+      if (activeStream) activeStream.getTracks().forEach((t) => t.stop());
+      els.localVideo.classList.add("hidden");
+      els.prerecordedPreview.classList.remove("hidden");
+      els.prerecordedPreview.src = `data:image/jpeg;base64,${data.image_base64}`;
+      els.previewFail.classList.add("hidden");
+
+      latestFrame.frameId = data.frame_id;
+      latestFrame.sourceId = data.source_id;
+      latestFrame.truth = "ALLOWLISTED_REMOTE_SNAPSHOT";
+      els.frameId.textContent = `frame: ${data.frame_id}`;
+      els.sourceLabel.textContent = data.source_id.toUpperCase();
+      els.inferenceFrameTruth.textContent = "OFFLINE / NOT RUN";
+
+      setHealth("camera", "READY", "MEASURED");
+      clearOverlay();
+      renderLayeredBreakdown(null, []);
+      showToast(`Real snapshot loaded from Guayaquil (${data.width}x${data.height})`);
+    }
+  } catch (err) {
+    console.warn("fetchRemoteSnapshot failed:", err);
+    els.previewFail.classList.remove("hidden");
+    els.previewFailTitle.textContent = "REMOTE CAMERA SNAPSHOT BLOCKED";
+    els.previewFailText.textContent = `Could not reach ${sourceId} over Tailscale proxy: ${err.message}`;
     setHealth("camera", "OFFLINE", "UNVERIFIED");
   }
 }
@@ -620,7 +753,6 @@ function captureCurrentFrame() {
   const canvas = els.captureCanvas;
   const video = els.localVideo;
   if (!video || !video.videoWidth || !activeStream) {
-    // P0: Do NOT generate artificial frame / canvas placeholder
     return null;
   }
   canvas.width = video.videoWidth;
@@ -654,7 +786,7 @@ async function runLiveSiMaDemo() {
         els.previewFailText.textContent = "Webcam stream is inactive. Please allow camera permissions or start camera before running live inference.";
         showToast("BLOCKED: No real webcam frame captured");
         setHealth("camera", "OFFLINE", "UNVERIFIED");
-        setHealth("sima", "READY", "UNVERIFIED");
+        setHealth("sima", "OFFLINE", "UNVERIFIED");
         resetRunView({ clearFrame: true });
         return;
       }
@@ -678,7 +810,7 @@ async function runLiveSiMaDemo() {
       const detections = extractDetections(payload);
       drawDetections(detections, payload);
       renderState({ current: payload });
-      showToast(`Modalix YOLO26m inference completed in ${payload.sima_telemetry?.latency_ms?.toFixed(1) || 31.2} ms`);
+      showToast("Live inference evaluated fail-closed (Modalix offline)");
     } else {
       // Remote source (GYE Dahua Ch2/Ch3)
       const res = await fetch("/api/inference/source", {
@@ -699,6 +831,7 @@ async function runLiveSiMaDemo() {
       syncLatestFrameFromState({ current: payload });
 
       if (payload.image_base64 || payload.snapshot_base64) {
+        if (activeStream) activeStream.getTracks().forEach((t) => t.stop());
         els.localVideo.classList.add("hidden");
         els.prerecordedPreview.classList.remove("hidden");
         els.prerecordedPreview.src = `data:image/jpeg;base64,${payload.image_base64 || payload.snapshot_base64}`;
@@ -708,20 +841,21 @@ async function runLiveSiMaDemo() {
       const detections = extractDetections(payload);
       drawDetections(detections, payload);
       renderState({ current: payload });
-      showToast(`Guayaquil Dahua inference completed on Modalix: ${detections.length} objects detected`);
+      showToast("Real Guayaquil frame received • SiMa inference OFFLINE (fail-closed)");
     }
   } catch (err) {
     console.error("runLiveSiMaDemo error:", err);
     clearOverlay();
-    setHealth("sima", "BLOCKED", "UNVERIFIED");
-    setHealth("mla", "BLOCKED", "UNVERIFIED");
-    els.inferenceFrameTruth.textContent = "UNVERIFIED";
+    setHealth("sima", "OFFLINE", "UNVERIFIED");
+    setHealth("mla", "OFFLINE", "UNVERIFIED");
+    els.inferenceFrameTruth.textContent = "OFFLINE / UNVERIFIED";
     els.frameMatch.textContent = "UNVERIFIED";
     els.approvalBoundaryKicker.textContent = "INFERENCE FAILED";
-    els.approvalState.textContent = "SAFELY BLOCKED (INFERENCE FAILED)";
-    els.decisionEmptyTitle.textContent = "Inference Failed Safe";
-    els.decisionEmptyDesc.textContent = "SiMa DevKit / sidecar communication failed. Guardian remains fail-closed.";
+    els.approvalState.textContent = "SAFELY BLOCKED (INFERENCE OFFLINE)";
+    els.decisionEmptyTitle.textContent = "SiMa Inference Offline";
+    els.decisionEmptyDesc.textContent = "SiMa DevKit is physically disconnected. Guardian remains fail-closed.";
     renderHeroHardwareCard(null);
+    renderLayeredBreakdown(null, []);
     showToast(`Inference fail-closed: ${err.message}`);
   } finally {
     els.runLiveDemoBtn.disabled = false;
@@ -743,6 +877,8 @@ async function runGovernedFlow() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     renderState(data);
+    const detections = extractDetections(data);
+    renderLayeredBreakdown(data, detections);
     showToast("Governed Reference Flow reached Human Approval Gate");
   } catch (err) {
     showToast(`Failed to run governed flow: ${err.message}`);
@@ -781,7 +917,6 @@ async function rejectAction() {
   }
 }
 
-// Lifecycle Interruptible Actions
 async function callLifecycleEndpoint(endpoint, message) {
   try {
     const res = await fetch(endpoint, { method: "POST" });
@@ -794,7 +929,6 @@ async function callLifecycleEndpoint(endpoint, message) {
   }
 }
 
-// Setup Event Listeners
 function setupEvents() {
   if (els.srcBtnWebcam) {
     els.srcBtnWebcam.addEventListener("click", () => {
@@ -808,12 +942,7 @@ function setupEvents() {
     els.srcBtnGyeCh2.addEventListener("click", () => {
       updateSourceButtons("gye-dahua-ch2");
       resetRunView({ clearFrame: false });
-      if (activeStream) activeStream.getTracks().forEach((t) => t.stop());
-      els.localVideo.classList.add("hidden");
-      els.prerecordedPreview.classList.add("hidden");
-      els.previewFail.classList.remove("hidden");
-      els.previewFailTitle.textContent = "GUAYAQUIL DAHUA CH2 READY";
-      els.previewFailText.textContent = "Click '⚡ RUN LIVE SiMa DEMO' to fetch snapshot across Tailscale & infer on Modalix.";
+      fetchRemoteSnapshot("gye-dahua-ch2");
     });
   }
 
@@ -821,12 +950,7 @@ function setupEvents() {
     els.srcBtnGyeCh3.addEventListener("click", () => {
       updateSourceButtons("gye-dahua-ch3");
       resetRunView({ clearFrame: false });
-      if (activeStream) activeStream.getTracks().forEach((t) => t.stop());
-      els.localVideo.classList.add("hidden");
-      els.prerecordedPreview.classList.add("hidden");
-      els.previewFail.classList.remove("hidden");
-      els.previewFailTitle.textContent = "GUAYAQUIL DAHUA CH3 READY";
-      els.previewFailText.textContent = "Click '⚡ RUN LIVE SiMa DEMO' to fetch snapshot across Tailscale & infer on Modalix.";
+      fetchRemoteSnapshot("gye-dahua-ch3");
     });
   }
 
@@ -834,6 +958,9 @@ function setupEvents() {
     els.sourceSelect.addEventListener("change", (e) => {
       updateSourceButtons(e.target.value);
       resetRunView({ clearFrame: false });
+      if (e.target.value.startsWith("gye-dahua")) {
+        fetchRemoteSnapshot(e.target.value);
+      }
     });
   }
 
@@ -890,7 +1017,6 @@ function setupEvents() {
   }
 }
 
-// Initialization
 document.addEventListener("DOMContentLoaded", () => {
   setupEvents();
   fetchCameraSources();

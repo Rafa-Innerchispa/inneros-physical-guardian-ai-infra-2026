@@ -7,6 +7,7 @@ from time import perf_counter
 from typing import Any
 from uuid import uuid4
 
+from .enrichment import GLOBAL_ENRICHMENT_ENGINE
 from .frame_input import FramePayload
 from .models import DemoTrace, ProposedAction
 from .physical_io import PHYSICAL_IO
@@ -152,12 +153,15 @@ class GuardianDemoEngine:
             frame_ref=f"fixture://{scenario}/frame-001",
         )
         trace.truth["detections"] = inference.inference_truth
+        runtime_dict = runtime_result_to_dict(inference)
+        enriched_dets = GLOBAL_ENRICHMENT_ENGINE.enrich_detections(runtime_dict.get("detections", []))
+        runtime_dict["enriched_detections"] = enriched_dets
         trace.stages.append(
             {
                 "stage": "UNDERSTAND",
                 "status": "complete",
                 "summary": f"{len(inference.detections)} tracked object(s) normalized",
-                "runtime": runtime_result_to_dict(inference),
+                "runtime": runtime_dict,
                 "truth": inference.inference_truth,
             }
         )
@@ -315,6 +319,11 @@ class GuardianDemoEngine:
             return self.state()
 
         runtime_dict = runtime_result_to_dict(inference)
+        enriched_dets = GLOBAL_ENRICHMENT_ENGINE.enrich_detections(
+            runtime_dict.get("detections", []),
+            image_bytes=frame.image_bytes,
+        )
+        runtime_dict["enriched_detections"] = enriched_dets
         trace.inference = runtime_dict
         trace.truth["detections"] = TRUTH_MEASURED
         trace.truth["temporal_reasoning"] = "DETERMINISTIC_RULE_ON_VERIFIED_PERCEPTION"

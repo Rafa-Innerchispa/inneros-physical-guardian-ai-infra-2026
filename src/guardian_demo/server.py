@@ -76,18 +76,29 @@ def _system_status() -> dict[str, Any]:
     current = ENGINE.current
     measured_frame = bool(current and current.truth.get("detections") == TRUTH_MEASURED)
     evidence_ready = bool(ENGINE.latest_evidence)
-    sima_state = str(sima.get("status", "BLOCKED"))
+    sima_state = "READY" if measured_frame else ("OFFLINE" if sima.get("status") == "BLOCKED" else str(sima.get("status", "OFFLINE")))
     io_state = "READY" if io.get("status") == "READY_CONFIGURED" else (
         "BLOCKED" if io.get("status") == "INVALID_LOCAL_BRIDGE_CONFIG" else "DEGRADED"
     )
+    _, config_error = _camera_sources()
+    camera_state = "BLOCKED" if config_error else "READY"
     return {
-        "camera": {"status": "READY", "truth": "UNVERIFIED"},
+        "camera": {
+            "status": camera_state,
+            "truth": "ALLOWLISTED_REMOTE_SNAPSHOT" if (current and current.frame_source and "remote" in str(current.frame_source.get("frame_id", ""))) else "UNVERIFIED"
+        },
         "sima_modalix": {
-            "status": "READY" if measured_frame else sima_state,
+            "status": "READY" if measured_frame else "OFFLINE",
             "truth": "MEASURED" if measured_frame else "UNVERIFIED",
+            "configured_target": "SiMa.ai Modalix EV74 (192.168.1.20)",
+        },
+        "identity_enrichment": {
+            "status": "READY",
+            "truth": "UNVERIFIED",
+            "biometric_matcher": "FAIL_CLOSED_UNKNOWN",
         },
         "mla": {
-            "status": "READY" if measured_frame else sima_state,
+            "status": "READY" if measured_frame else "OFFLINE",
             "truth": "MEASURED" if measured_frame else "UNVERIFIED",
         },
         "guardian": {"status": "READY", "truth": "REAL"},
@@ -265,6 +276,56 @@ class GuardianDemoHandler(BaseHTTPRequestHandler):
         if path == "/api/camera/sources":
             self._send_json(_source_catalog())
             return
+        if path == "/api/camera/snapshot":
+            from urllib.parse import parse_qs
+            query = parse_qs(urlparse(self.path).query)
+            source_id = query.get("source_id", [""])[0]
+            registry, configuration_error = _camera_sources()
+            if configuration_error:
+                self._send_json(
+                    {
+                        "status": "REMOTE_SOURCE_BLOCKED",
+                        "camera_status": "OFFLINE",
+                        "source_status": "BLOCKED",
+                        "truth": "UNVERIFIED",
+                        "error": "remote camera configuration is invalid",
+                    },
+                    HTTPStatus.SERVICE_UNAVAILABLE,
+                )
+                return
+            if not source_id:
+                self._send_json({"error": "source_id query parameter is required"}, HTTPStatus.BAD_REQUEST)
+                return
+            try:
+                frame = registry.capture(source_id)
+                self._send_json({
+                    "source_id": frame.source_id,
+                    "frame_id": frame.frame_id,
+                    "captured_at": frame.captured_at,
+                    "image_type": frame.image_type,
+                    "image_base64": base64.b64encode(frame.image_bytes).decode("ascii"),
+                    "sha256": frame.sha256,
+                    "width": frame.width,
+                    "height": frame.height,
+                    "camera_status": "READY",
+                    "source_status": "READY",
+                    "sima_inference": "OFFLINE / NOT RUN",
+                    "identity_enrichment": "NOT RUN",
+                })
+            except (PermissionError, RuntimeError, ValueError) as exc:
+                self._send_json(
+                    {
+                        "source_id": source_id,
+                        "status": "OFFLINE",
+                        "camera_status": "OFFLINE",
+                        "source_status": "OFFLINE",
+                        "truth": "UNVERIFIED",
+                        "error": str(exc),
+                        "sima_inference": "OFFLINE / NOT RUN",
+                    },
+                    HTTPStatus.SERVICE_UNAVAILABLE,
+                )
+            return
         if path == "/api/system/status":
             self._send_json(_system_status())
             return
@@ -347,6 +408,10 @@ class GuardianDemoHandler(BaseHTTPRequestHandler):
                     frame=frame,
                     source_truth="ALLOWLISTED_REMOTE_SNAPSHOT",
                 )
+                if isinstance(result, dict):
+                    result["snapshot_base64"] = base64.b64encode(frame.image_bytes).decode("ascii")
+                    result["image_base64"] = result["snapshot_base64"]
+                    result["frame_source"] = frame.source_provenance()
             elif path == "/api/voice/intent":
                 result = VOICE.route(
                     str(payload.get("transcript", "")),
