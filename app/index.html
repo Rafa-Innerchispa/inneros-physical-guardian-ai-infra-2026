@@ -8,7 +8,7 @@
 </head>
 <body>
   <main class="console">
-    <!-- COMPACT MASTHEAD & SYSTEM HEALTH -->
+    <!-- 1. COMPACT MASTHEAD & SYSTEM HEALTH STRIP -->
     <header class="masthead">
       <div class="brand-block">
         <div class="brand-top">
@@ -21,17 +21,22 @@
         </div>
       </div>
 
-      <!-- COMPACT HEALTH STRIP (4 CARDS) -->
+      <!-- 5-CELL HEALTH STRIP: SEPARATE SOURCE, INFERENCE, IDENTITY -->
       <section class="health-strip" aria-label="System Health">
         <div class="health-cell" data-health="camera">
-          <span>CAMERA</span>
+          <span>CAMERA SOURCE</span>
           <strong id="cameraHealth">READY</strong>
           <small id="cameraTruth">UNVERIFIED</small>
         </div>
         <div class="health-cell" data-health="sima">
           <span>SiMa MODALIX</span>
-          <strong id="simaHealth">READY</strong>
+          <strong id="simaHealth">OFFLINE</strong>
           <small id="simaTruth">UNVERIFIED</small>
+        </div>
+        <div class="health-cell" data-health="identity">
+          <span>IDENTITY ENRICHMENT</span>
+          <strong id="identityHealth">READY</strong>
+          <small id="identityTruth">LOCAL PROFILE</small>
         </div>
         <div class="health-cell" data-health="guardian">
           <span>GUARDIAN</span>
@@ -43,16 +48,16 @@
           <strong id="evidenceHealth">READY</strong>
           <small id="evidenceTruth">UNVERIFIED</small>
         </div>
-        <!-- Hidden health cell for test compatibility -->
+        <!-- Hidden health cell for legacy test runner compatibility -->
         <div class="health-cell hidden" data-health="mla">
           <span>MLA RUNTIME</span>
-          <strong id="mlaHealth">READY</strong>
+          <strong id="mlaHealth">OFFLINE</strong>
           <small id="mlaTruth">UNVERIFIED</small>
         </div>
       </section>
     </header>
 
-    <!-- SOURCE CARDS & DEMO TRIGGER CONTROL BAR -->
+    <!-- 2. SOURCE SELECTOR & DEMO TRIGGER CONTROL BAR -->
     <section class="source-control-bar">
       <div class="source-cards-group">
         <span class="bar-label">SOURCE:</span>
@@ -77,7 +82,6 @@
             <small class="src-status gye" id="gyeCh3Status">GUAYAQUIL • READY</small>
           </div>
         </button>
-        <!-- Retained select for contract & custom sources -->
         <select id="sourceSelect" class="hidden-select" aria-label="Camera source select">
           <option value="laptop-webcam">LAPTOP WEBCAM</option>
           <option value="local-prerecorded">LOCAL PRERECORDED</option>
@@ -99,7 +103,7 @@
       </div>
     </section>
 
-    <!-- MAIN 60 / 40 WORKSPACE GRID -->
+    <!-- 3. MAIN 60 / 40 WORKSPACE GRID -->
     <section class="main-workspace-grid">
       <!-- LEFT COLUMN (60%): CAMERA / LIVE VIEW -->
       <article class="camera-workspace-card" id="camera-section">
@@ -125,14 +129,14 @@
         <div class="remote-infra-banner hidden" id="remoteInfraBanner">
           <div class="infra-dot pulse"></div>
           <div class="infra-details">
-            <strong>GUAYAQUIL, ECUADOR (PC DOCTOR LAB) → SAN FRANCISCO HOST → SiMa MODALIX → GUARDIAN</strong>
-            <p>Live Dahua DVR stream routed securely over private Tailscale tunnel (AMD .5 node → SF host → SiMa DevKit EV74 MLSoC).</p>
+            <strong>GUAYAQUIL, ECUADOR (PC DOCTOR LAB) → TAILSCALE PROXY → SAN FRANCISCO HOST → SiMa MODALIX → GUARDIAN</strong>
+            <p>Live Dahua DVR stream routed securely over private Tailscale tunnel (100.72.153.124:8790 → 127.0.0.1:8791 → SiMa DevKit EV74 MLSoC).</p>
           </div>
         </div>
 
         <div class="preview-shell">
           <video id="cameraVideo" autoplay muted playsinline></video>
-          <img id="prerecordedPreview" class="hidden" alt="Local prerecorded preview" />
+          <img id="prerecordedPreview" class="hidden" alt="Camera snapshot preview" />
           <canvas id="captureCanvas" class="hidden" width="1280" height="720"></canvas>
           <canvas id="overlayCanvas" width="1280" height="720" aria-label="Backend detection overlay"></canvas>
           <div class="preview-fail" id="previewFail">
@@ -144,8 +148,8 @@
             <span id="frameId">frame: none</span>
           </div>
           <div class="preview-label top-right">
-            <strong>INFERENCE TRUTH</strong>
-            <span id="inferenceFrameTruth">UNVERIFIED</span>
+            <strong>SiMa INFERENCE</strong>
+            <span id="inferenceFrameTruth">OFFLINE / UNVERIFIED</span>
           </div>
         </div>
 
@@ -170,9 +174,67 @@
         </div>
       </article>
 
-      <!-- RIGHT COLUMN (40%): HARDWARE PROOF + GUARDIAN ACTION GATE + EVIDENCE SUMMARY -->
+      <!-- RIGHT COLUMN (40%): 3-TIER STATUS + PROOF + GUARDIAN GATE + EVIDENCE -->
       <aside class="right-stack-column">
-        <!-- 1. REAL HARDWARE PROOF CARD (COMPACT 2-ROW) -->
+        <!-- A. 3-TIER TRUTH BREAKDOWN CARD (SOURCE, INFERENCE, IDENTITY) -->
+        <article class="truth-breakdown-card" id="truthBreakdownCard">
+          <div class="card-head-compact">
+            <span class="proof-badge">WHAT SiMa SAW & LOCAL ENRICHMENT</span>
+            <span class="provenance-chip" id="simaStatusChip">OFFLINE</span>
+          </div>
+
+          <div class="three-tier-container">
+            <!-- 1. CAMERA SOURCE TIER -->
+            <div class="tier-block">
+              <div class="tier-header">
+                <span class="tier-tag">1. CAMERA SOURCE</span>
+                <span class="tier-state ready" id="tierCameraState">READY</span>
+              </div>
+              <div class="tier-content">
+                <strong id="tierCameraLabel">Laptop Webcam (Client Capture)</strong>
+                <span class="tier-sub" id="tierCameraSub">Transport: Local MediaStream • SHA-256 Verified</span>
+              </div>
+            </div>
+
+            <!-- 2. SiMa INFERENCE TIER ("WHAT SiMa SAW") -->
+            <div class="tier-block">
+              <div class="tier-header">
+                <span class="tier-tag">2. SiMa INFERENCE ("WHAT SiMa SAW")</span>
+                <span class="tier-state unverified" id="tierSimaState">OFFLINE / NOT RUN</span>
+              </div>
+              <div class="tier-content" id="tierSimaContent">
+                <div class="offline-sima-notice" id="simaOfflineNotice">
+                  <span class="lbl-warn">SiMa MODALIX: OFFLINE / UNVERIFIED</span>
+                  <p>Configured Target: <strong>SiMa.ai Modalix EV74 (192.168.1.20)</strong></p>
+                  <p>Latency: <strong>---</strong> | Detections: <strong>none / not run</strong> | Execution: <strong>unavailable</strong></p>
+                </div>
+                <div class="live-sima-detections hidden" id="simaLiveDetections">
+                  <div class="sima-detections-list" id="simaDetectionsList"></div>
+                  <div class="sima-telemetry-micro">
+                    <span>Latency: <strong id="tierSimaLatency">---</strong></span>
+                    <span>Throughput: <strong id="tierSimaFps">---</strong></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. IDENTITY ENRICHMENT TIER -->
+            <div class="tier-block">
+              <div class="tier-header">
+                <span class="tier-tag">3. IDENTITY ENRICHMENT</span>
+                <span class="tier-state local" id="tierIdentityState">READY (LOCAL)</span>
+              </div>
+              <div class="tier-content" id="tierIdentityContent">
+                <div class="identity-profile-box" id="identityProfileBox">
+                  <strong id="identityMainLabel">Enrolled Profiles: Rafael (Owner), Max (Home Dog)</strong>
+                  <p id="identitySubText">Separate local contract: Enriches raw SiMa person/pet detections with enrolled local profile signatures.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- B. REAL HARDWARE PROOF CARD -->
         <article class="hero-proof-card" id="hardwareHeroCard">
           <div class="card-head-compact">
             <span class="proof-badge">REAL HARDWARE PROOF</span>
@@ -202,7 +264,7 @@
           </div>
         </article>
 
-        <!-- 2. GUARDIAN DECISION & ACTION GATE -->
+        <!-- C. GUARDIAN DECISION & ACTION GATE -->
         <article class="action-gate-card" id="decision-gate">
           <div class="card-head-compact">
             <div class="gate-title-group">
@@ -274,7 +336,7 @@
           </div>
         </article>
 
-        <!-- 3. EVIDENCE SUMMARY RECEIPT -->
+        <!-- D. EVIDENCE SUMMARY RECEIPT -->
         <article class="evidence-summary-card" id="evidence-section">
           <div class="card-head-compact">
             <div class="gate-title-group">
@@ -288,6 +350,7 @@
             <div class="r-row"><span class="r-k">Frame / Source:</span><strong class="r-v" id="receiptFrame">UNVERIFIED</strong></div>
             <div class="r-row"><span class="r-k">SiMa Truth:</span><strong class="r-v" id="receiptSima">UNVERIFIED</strong></div>
             <div class="r-row"><span class="r-k">Detections:</span><strong class="r-v" id="receiptDetections">No backend detections</strong></div>
+            <div class="r-row"><span class="r-k">Identity:</span><strong class="r-v" id="receiptIdentity">Unverified / None</strong></div>
             <div class="r-row"><span class="r-k">Policy Decision:</span><strong class="r-v" id="receiptDecision">No decision</strong></div>
             <div class="r-row"><span class="r-k">Approval State:</span><strong class="r-v" id="receiptApproval">No action pending</strong></div>
             <div class="r-row"><span class="r-k">Physical Action:</span><strong class="r-v" id="receiptAction">Nothing executed</strong></div>
@@ -302,7 +365,7 @@
       </aside>
     </section>
 
-    <!-- ADVANCED TECHNICAL PROOF DRAWER (BELOW THE FOLD) -->
+    <!-- 4. ADVANCED TECHNICAL PROOF DRAWER (BELOW THE FOLD) -->
     <details class="advanced-proof-accordion" id="advancedProof">
       <summary class="advanced-summary">
         <span>🔍 ADVANCED TECHNICAL PROOF & ENGINE DIAGNOSTICS</span>
