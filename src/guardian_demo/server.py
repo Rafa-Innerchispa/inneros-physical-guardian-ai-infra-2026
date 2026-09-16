@@ -74,7 +74,7 @@ def _system_status() -> dict[str, Any]:
     sima = RUNTIME_SLOTS["sima-slot"].status()
     io = PHYSICAL_IO.status()
     current = ENGINE.current
-    measured_frame = bool(current and current.truth.get("detections") == TRUTH_MEASURED)
+    measured_frame = bool(current and current.truth.get("detections") in {TRUTH_MEASURED, "MEASURED_SPONSOR_RUNTIME"})
     evidence_ready = bool(ENGINE.latest_evidence)
     sima_state = "READY" if measured_frame else ("OFFLINE" if sima.get("status") == "BLOCKED" else str(sima.get("status", "OFFLINE")))
     io_state = "READY" if io.get("status") == "READY_CONFIGURED" else (

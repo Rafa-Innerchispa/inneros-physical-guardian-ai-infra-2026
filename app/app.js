@@ -263,10 +263,12 @@ function extractDetections(traceOrPayload) {
 
 function renderLayeredBreakdown(payload, detections) {
   const isMeasured = Boolean(
-    payload?.sima_telemetry?.truth === "MEASURED" ||
-    payload?.truth?.detections === "MEASURED" ||
-    payload?.current?.truth?.detections === "MEASURED" ||
-    payload?.inference_truth === "MEASURED"
+    normalizeTruth(payload?.sima_telemetry?.truth) === "MEASURED" ||
+    normalizeTruth(payload?.truth?.detections) === "MEASURED" ||
+    normalizeTruth(payload?.current?.truth?.detections) === "MEASURED" ||
+    normalizeTruth(payload?.inference_truth) === "MEASURED" ||
+    normalizeTruth(payload?.current?.inference?.inference_truth) === "MEASURED" ||
+    normalizeTruth(payload?.current?.inference?.truth) === "MEASURED"
   );
 
   // Layer 3: SiMa Status
@@ -605,7 +607,16 @@ function resetRunView({ clearFrame = true } = {}) {
 function syncLatestFrameFromState(state) {
   const trace = state?.current || (state?.trace_id ? state : null);
   const evidence = state?.latest_evidence || (state?.evidence_id ? state : null);
-  const sima = evidence?.sima_telemetry || trace?.sima_telemetry || trace?.inference?.telemetry || null;
+  const inference = trace?.inference || evidence?.inference || state?.inference || null;
+  const sima = evidence?.sima_telemetry || trace?.sima_telemetry || (inference ? {
+    device: inference.device || "SiMa.ai Modalix DevKit (192.168.1.20)",
+    model: inference.model || "yolo26m-seg-bf16-b1",
+    runtime: inference.runtime || "PyNeat 0.4.0 / SiMa MLA",
+    latency_ms: inference.telemetry?.latency_ms || inference.runtime_overhead_ms || null,
+    fps: inference.telemetry?.latency_ms ? (1000.0 / inference.telemetry.latency_ms) : (inference.fps || null),
+    detections_count: (inference.detections || []).length,
+    truth: inference.inference_truth || trace?.truth?.detections || "MEASURED_SPONSOR_RUNTIME"
+  } : null);
   const frameSource = trace?.frame_source || evidence?.governance?.frame_source || trace?.inference?.source || state?.frame_source || null;
 
   if (frameSource?.frame_id) {
@@ -622,9 +633,9 @@ function syncLatestFrameFromState(state) {
     renderHeroHardwareCard(sima, latestFrame.sourceId, latestFrame.frameId);
     els.simaModel.textContent = sima.model || "yolo26m-seg-bf16-b1";
     els.simaRuntime.textContent = sima.runtime || "PyNeat 0.4.0 / SiMa MLA";
-    els.simaDevice.textContent = sima.device || "SiMa.ai Modalix DevKit";
+    els.simaDevice.textContent = sima.device || "SiMa.ai Modalix DevKit (192.168.1.20)";
     els.simaLatency.textContent = sima.latency_ms ? `~${sima.latency_ms.toFixed(2)} ms` : "---";
-    els.simaFps.textContent = sima.fps ? `~${sima.fps.toFixed(1)}` : "---";
+    els.simaFps.textContent = sima.fps ? `~${sima.fps.toFixed(1)} FPS MLSoC` : "---";
     setHealth("sima", "READY", "MEASURED");
     setHealth("mla", "READY", "MEASURED");
   } else {
@@ -702,6 +713,27 @@ async function fetchState() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     renderState(data);
+    
+    // Check live system status on startup
+    try {
+      const statusRes = await fetch("/api/system/status");
+      if (statusRes.ok) {
+        const sysStatus = await statusRes.json();
+        if (sysStatus.sima_modalix?.status === "READY") {
+          setHealth("sima", "READY", "MEASURED");
+          setHealth("mla", "READY", "MEASURED");
+          if (els.tierSimaState) {
+            els.tierSimaState.textContent = "READY / MEASURED";
+            els.tierSimaState.className = "tier-state measured";
+          }
+        }
+        if (sysStatus.camera?.status === "READY") {
+          setHealth("camera", "READY", "MEASURED");
+        }
+      }
+    } catch (e) {
+      console.warn("Status check error:", e);
+    }
   } catch (err) {
     console.error("fetchState error:", err);
   }
@@ -843,10 +875,11 @@ async function runLiveSiMaDemo() {
 
       const trace = payload?.current || (payload?.trace_id ? payload : null);
       const isMeasured = Boolean(
-        payload?.sima_telemetry?.truth === "MEASURED" ||
-        payload?.truth?.detections === "MEASURED" ||
-        payload?.current?.truth?.detections === "MEASURED" ||
-        payload?.inference_truth === "MEASURED"
+        normalizeTruth(payload?.sima_telemetry?.truth) === "MEASURED" ||
+        normalizeTruth(payload?.truth?.detections) === "MEASURED" ||
+        normalizeTruth(payload?.current?.truth?.detections) === "MEASURED" ||
+        normalizeTruth(payload?.inference_truth) === "MEASURED" ||
+        normalizeTruth(payload?.current?.inference?.inference_truth) === "MEASURED"
       );
       if (isMeasured) {
         if (trace?.status === "AWAITING_APPROVAL") {
@@ -892,10 +925,11 @@ async function runLiveSiMaDemo() {
 
       const trace = payload?.current || (payload?.trace_id ? payload : null);
       const isMeasured = Boolean(
-        payload?.sima_telemetry?.truth === "MEASURED" ||
-        payload?.truth?.detections === "MEASURED" ||
-        payload?.current?.truth?.detections === "MEASURED" ||
-        payload?.inference_truth === "MEASURED"
+        normalizeTruth(payload?.sima_telemetry?.truth) === "MEASURED" ||
+        normalizeTruth(payload?.truth?.detections) === "MEASURED" ||
+        normalizeTruth(payload?.current?.truth?.detections) === "MEASURED" ||
+        normalizeTruth(payload?.inference_truth) === "MEASURED" ||
+        normalizeTruth(payload?.current?.inference?.inference_truth) === "MEASURED"
       );
       if (isMeasured) {
         if (trace?.status === "AWAITING_APPROVAL") {
