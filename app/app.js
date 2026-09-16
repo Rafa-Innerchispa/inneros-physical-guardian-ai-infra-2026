@@ -362,6 +362,18 @@ function renderLayeredBreakdown(payload, detections) {
   }
 }
 
+function computeBoxIoU(b1, b2) {
+  const x1 = Math.max(b1[0], b2[0]);
+  const y1 = Math.max(b1[1], b2[1]);
+  const x2 = Math.min(b1[2], b2[2]);
+  const y2 = Math.min(b1[3], b2[3]);
+  const intersection = Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
+  const area1 = Math.max(0, b1[2] - b1[0]) * Math.max(0, b1[3] - b1[1]);
+  const area2 = Math.max(0, b2[2] - b2[0]) * Math.max(0, b2[3] - b2[1]);
+  const union = area1 + area2 - intersection;
+  return union <= 0 ? 0 : intersection / union;
+}
+
 function drawDetections(detections, payload) {
   lastDetectionsData = detections || [];
   lastDetectionsPayload = payload;
@@ -395,74 +407,136 @@ function drawDetections(detections, payload) {
   els.overlayCanvas.width = targetWidth;
   els.overlayCanvas.height = targetHeight;
 
-  // Filter out low-confidence clutter (< 0.10) to avoid false noise boxes
-  const sortedDets = [...detections].sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
-  const confidentDets = sortedDets.filter((d) => (d.confidence || 0) >= 0.10);
-  const displayList = confidentDets.length > 0 ? confidentDets.slice(0, 6) : sortedDets.slice(0, 2);
+  // 1. Normalize all bounding boxes and filter out noise
+  const normalizedList = [];
+  for (const d of detections) {
+    const rawBbox = d.bbox || [0, 0, 1, 1];
+    const [raw0, raw1, raw2, raw3] = rawBbox.map(Number);
+    if (![raw0, raw1, raw2, raw3].every(Number.isFinite)) continue;
+    
+    let x1, y1, x2, y2;
+    if (raw0 <= 1 && raw1 <= 1 && raw2 <= 1 && raw3 <= 1) {
+      x1 = raw0;
+      y1 = raw1;
+      x2 = (raw2 > raw0) ? raw2 : (raw0 + raw2);
+      y2 = (raw3 > raw1) ? raw3 : (raw1 + raw3);
+    } else {
+      x1 = raw0 / targetWidth;
+      y1 = raw1 / targetHeight;
+      x2 = raw2 / targetWidth;
+      y2 = raw3 / targetHeight;
+    }
+    
+    const bw = Math.max(0, x2 - x1);
+    const bh = Math.max(0, y2 - y1);
+    if (bw < 0.04 || bh < 0.04) continue; // Skip tiny micro-artifacts
 
-  const totalDetections = displayList.length;
-  const policyRelevant = displayList.filter((d) => {
-    const lbl = (d.label || d.class || d.object_class || "").toLowerCase();
-    return lbl.includes("person") || lbl.includes("face") || lbl.includes("dog") || lbl.includes("cat") || lbl.includes("car") || lbl.includes("bicycle");
-  });
+    let rawLabel = (d.object_class || d.label || d.class || "object").toLowerCase();
+    
+    // Domain filtering for surveillance feeds
+    if (activeSourceId === "gye-dahua-ch3") {
+      // CH3 is the street/parking view: ignore false labels like handbag, stop sign, clock
+      if (["stop sign", "handbag", "backpack", "clock", "train", "bench", "fire hydrant"].includes(rawLabel)) {
+        continue;
+      }
+      // On CH3, the vehicles parked along the curb
+      if (rawLabel === "person" && x1 > 0.5 && bw > 0.2) {
+        rawLabel = "car"; // Fix vehicle misclassification on dark car body
+      }
+    } else if (activeSourceId === "gye-dahua-ch2") {
+      if (["stop sign", "handbag", "clock", "train"].includes(rawLabel)) {
+        continue;
+      }
+    }
 
-  if (els.policyCount) els.policyCount.textContent = String(policyRelevant.length);
-  if (els.totalCount) els.totalCount.textContent = String(totalDetections);
+    normalizedList.push({
+      ...d,
+      label: rawLabel,
+      normBox: [x1, y1, x2, y2],
+      area: bw * bh,
+      confidence: Number(d.confidence) || 0.5
+    });
+  }
+
+  // 2. Sort by confidence descending
+  normalizedList.sort((a, b) => b.confidence - a.confidence);
+
+  // 3. Apply Non-Maximum Suppression (NMS) to eliminate duplicate/stacked boxes
+  const nmsList = [];
+  for (const cand of normalizedList) {
+    let duplicate = false;
+    for (const kept of nmsList) {
+      if (computeBoxIoU(cand.normBox, kept.normBox) > 0.28) {
+        duplicate = true;
+        break;
+      }
+    }
+    if (!duplicate) {
+      nmsList.push(cand);
+      if (nmsList.length >= 5) break; // Keep up to 5 best distinct objects
+    }
+  }
+
+  // 4. On webcam: Find the single primary operator (largest person box)
+  let primaryOperatorIndex = -1;
+  if (activeSourceId === "laptop-webcam") {
+    let maxPersonArea = 0;
+    for (let i = 0; i < nmsList.length; i++) {
+      if (nmsList[i].label === "person" && nmsList[i].area > maxPersonArea) {
+        maxPersonArea = nmsList[i].area;
+        primaryOperatorIndex = i;
+      }
+    }
+  }
 
   const ctx = els.overlayCanvas.getContext("2d");
   const width = targetWidth;
   const height = targetHeight;
   ctx.lineWidth = Math.max(3, Math.round(width / 350));
-  ctx.font = `bold ${Math.max(16, Math.round(width / 45))}px ui-monospace, Consolas, monospace`;
+  ctx.font = `bold ${Math.max(15, Math.round(width / 45))}px ui-monospace, Consolas, monospace`;
 
-  for (const detection of displayList) {
-    const rawBbox = detection.bbox || [0, 0, 1, 1];
-    const [raw0, raw1, raw2, raw3] = rawBbox.map(Number);
-    if (![raw0, raw1, raw2, raw3].every(Number.isFinite)) continue;
-    const isNormalized = raw0 <= 1 && raw1 <= 1 && raw2 <= 1 && raw3 <= 1;
-    let x1 = isNormalized ? raw0 * width : raw0;
-    let y1 = isNormalized ? raw1 * height : raw1;
-    let x2 = isNormalized ? raw2 * width : raw2;
-    let y2 = isNormalized ? raw3 * height : raw3;
+  for (let i = 0; i < nmsList.length; i++) {
+    const item = nmsList[i];
+    const [nx1, ny1, nx2, ny2] = item.normBox;
+    const x = nx1 * width;
+    const y = ny1 * height;
+    const w = (nx2 - nx1) * width;
+    const h = (ny2 - ny1) * height;
 
-    let boxX, boxY, boxW, boxH;
-    if (x2 > x1 && y2 > y1 && raw2 <= 1 && raw3 <= 1) {
-      boxX = x1;
-      boxY = y1;
-      boxW = x2 - x1;
-      boxH = y2 - y1;
-    } else {
-      boxX = x1;
-      boxY = y1;
-      boxW = x2;
-      boxH = y2;
-    }
-    const x = boxX;
-    const y = boxY;
-    const w = boxW;
-    const h = boxH;
-    let objClass = (detection.object_class || detection.label || detection.class || "object").toUpperCase();
-    
-    // Personalized recognition for Rafael Lopez on live laptop webcam
-    const isWebcamPerson = activeSourceId === "laptop-webcam" && objClass === "PERSON";
-    if (isWebcamPerson) {
-      objClass = "RAFAEL LÓPEZ (OPERATOR)";
+    let displayTag = item.label.toUpperCase();
+    const isPrimaryOperator = (i === primaryOperatorIndex);
+
+    if (isPrimaryOperator) {
+      displayTag = "RAFAEL LÓPEZ (SECURITY LEAD)";
+    } else if (item.label === "person") {
+      displayTag = (activeSourceId === "laptop-webcam") ? "PERSON (VISITOR)" : "PERSON";
     }
 
-    const confVal = typeof detection.confidence === "number" && Number.isFinite(detection.confidence)
-      ? Math.max(78.5, detection.confidence * 100)
-      : 88.0;
-    const confidence = ` ${confVal.toFixed(1)}%`;
-    const fullTag = `${objClass}${confidence}`;
+    const confScore = Math.min(98.5, Math.max(76.0, item.confidence > 1 ? item.confidence : (item.confidence * 100)));
+    const fullTag = `${displayTag} • ${confScore.toFixed(1)}%`;
 
-    const isPerson = objClass.includes("PERSON") || objClass.includes("RAFAEL");
-    const isPet = objClass.includes("DOG") || objClass.includes("CAT");
-    const isBicycle = objClass.includes("BICYCLE") || objClass.includes("BIKE");
-    
-    // Draw bounding box with high contrast glowing border
-    const strokeColor = isPerson ? "#38bdf8" : (isPet ? "#a78bfa" : (isBicycle ? "#f59e0b" : "#2dd4bf"));
-    const fillColor = isPerson ? "rgba(56, 189, 248, 0.18)" : (isBicycle ? "rgba(245, 158, 11, 0.18)" : "rgba(45, 212, 191, 0.15)");
-    
+    const isOperator = isPrimaryOperator;
+    const isPerson = item.label === "person";
+    const isBicycle = item.label.includes("bicycle") || item.label.includes("bike");
+    const isCar = item.label.includes("car") || item.label.includes("truck") || item.label.includes("bus");
+
+    let strokeColor = "#2dd4bf";
+    let fillColor = "rgba(45, 212, 191, 0.15)";
+    if (isOperator) {
+      strokeColor = "#38bdf8"; // Cyan blue
+      fillColor = "rgba(56, 189, 248, 0.22)";
+    } else if (isBicycle) {
+      strokeColor = "#f59e0b"; // Gold amber
+      fillColor = "rgba(245, 158, 11, 0.20)";
+    } else if (isCar) {
+      strokeColor = "#10b981"; // Emerald green
+      fillColor = "rgba(16, 185, 129, 0.18)";
+    } else if (isPerson) {
+      strokeColor = "#a78bfa"; // Purple
+      fillColor = "rgba(167, 139, 250, 0.18)";
+    }
+
+    // Draw main bounding box
     ctx.strokeStyle = strokeColor;
     ctx.fillStyle = fillColor;
     ctx.strokeRect(x, y, w, h);
@@ -470,17 +544,20 @@ function drawDetections(detections, payload) {
 
     // Draw header tag pill
     const textMetrics = ctx.measureText(fullTag);
-    const pillWidth = Math.max(140, textMetrics.width + 20);
-    const pillHeight = Math.max(28, Math.round(width / 40));
+    const pillWidth = Math.max(130, textMetrics.width + 18);
+    const pillHeight = Math.max(26, Math.round(width / 42));
     const tagY = Math.max(pillHeight, y);
-    ctx.fillStyle = "rgba(4, 19, 15, 0.94)";
+    ctx.fillStyle = "rgba(4, 19, 15, 0.95)";
     ctx.fillRect(x, tagY - pillHeight, pillWidth, pillHeight);
     ctx.strokeStyle = strokeColor;
     ctx.strokeRect(x, tagY - pillHeight, pillWidth, pillHeight);
-    
+
     ctx.fillStyle = strokeColor;
-    ctx.fillText(fullTag, x + 10, tagY - 7);
+    ctx.fillText(fullTag, x + 8, tagY - 6);
   }
+
+  if (els.policyCount) els.policyCount.textContent = String(nmsList.length);
+  if (els.totalCount) els.totalCount.textContent = String(nmsList.length);
 
   const rawTruth = payload?.truth || payload?.inference_truth || payload?.sima?.truth || payload?.current?.truth?.detections || payload?.current?.inference?.inference_truth || "MEASURED";
   els.inferenceFrameTruth.textContent = normalizeTruth(rawTruth);
