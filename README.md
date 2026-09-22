@@ -1,5 +1,16 @@
 # InnerOS Physical Guardian — AI Infra Summit 2026
 
+<!-- INNEROS-NARRATIVE:START -->
+> **InnerOS role:** R&D / Hackathon Validation  
+> **Lifecycle:** Submission snapshot  
+> **Lineage:** AI Infra Summit 2026 validation track for the Physical Guardian / VigilOS product line.
+>
+> This repository demonstrates the physical-world perception, policy, approval, action, verification, and evidence loop that feeds the maintained Physical Guardian product.
+>
+> **InnerOS principle:** hackathons are validation environments. Reusable capabilities are extracted into maintained products and platform layers rather than treated as disconnected one-off projects.
+<!-- INNEROS-NARRATIVE:END -->
+
+
 **Live hackathon build. Functional judge demo.**
 
 > **Continuity first:** a new chat/agent must read `docs/PROJECT_CONTINUITY.md` before changing code. It records the permanent-product vs hackathon boundary, canonical SHAs, sponsor strategy, on-site sequence and safety invariants.
