@@ -1,14 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
 [project]
-name = "inneros-physical-guardian-ai-infra-2026"
+name = "inneros-meta-guardian-2026"
 version = "0.1.0"
-description = "Hackathon composition layer for the InnerOS Physical Guardian AI Infra Summit 2026 demo"
-requires-python = ">=3.11"
+description = "Meta hackathon sandbox: local-first, governed physical infrastructure AI demonstration"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "InnerChispa"}]
+dependencies = []
 
-[project.optional-dependencies]
-speechmatics = ["speechmatics-rt==1.1.1"]
-speechmatics-live = ["speechmatics-rt==1.1.1", "pyaudio>=0.2.14"]
+[tool.setuptools.packages.find]
+where = ["src"]
 
-[tool.pytest.ini_options]
-pythonpath = ["src"]
-testpaths = ["tests"]
-addopts = "-q"
+[tool.setuptools.package-data]
+inneros_meta_guardian = ["static/*"]

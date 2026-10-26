@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="dark" />
+<meta name="description" content="InnerOS Autonomous Infrastructure Guardian. A controlled, local-first physical AI demonstration." />
+<title>InnerOS | Autonomous Infrastructure Guardian</title>
+<link rel="stylesheet" href="/styles.css" />
+<script defer src="/app.js"></script>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar" aria-label="Application navigation">
+    <div class="brand"><div class="brand-symbol">✳</div><div><strong>InnerOS</strong><span>GUARDIAN / META '26</span></div></div>
+    <p class="nav-title">WORKSPACE</p>
+    <a class="nav-link active" href="#overview"><span aria-hidden="true">◈</span> Command center</a>
+    <a class="nav-link" href="#operations"><span aria-hidden="true">◎</span> Incident lifecycle</a>
+    <a class="nav-link" href="#evidence"><span aria-hidden="true">▤</span> Evidence & audit</a>
+    <div class="sidebar-bottom">
+      <div class="safe-note"><span class="safe-dot"></span><strong>SAFETY MODE</strong><p>No live devices connected. Every signal and actuator is simulated.</p></div>
+      <div class="version">BUILD 0.1.0 <span>•</span> InnerChispa</div>
+    </div>
+  </aside>
+  <main id="overview" class="main">
+    <header class="topbar"><div class="breadcrumbs">WORKSPACE <span>/</span> COMMAND CENTER</div><div class="topbar-right"><span class="status-pill"><i></i> LOCAL-FIRST</span><span class="avatar" aria-label="Demo operator">IG</span></div></header>
+    <div class="page-content">
+      <section class="intro"><div><div class="eyebrow">PHYSICAL AI <span class="small-line"></span> META GLOBAL HACKATHON 2026</div><h1>Infrastructure, <em>understood.</em></h1><p>From detecting anomalies to verified, human-governed action. One safe, auditable operational loop.</p></div><div class="live-box"><span class="pulse"></span><span>DEMO ENVIRONMENT<br/><strong>SIMULATION ACTIVE</strong></span></div></section>
+      <div class="disclaimer" role="note"><span aria-hidden="true">ⓘ</span><div><strong>Synthetic incident demonstration.</strong> No real cameras, door locks, building networks, or customer data are connected. Model-generated explanations never authorize actions.</div></div>
+      <section class="stat-grid" aria-label="Overview statistics">
+        <div class="stat"><span class="stat-label">TOTAL INCIDENTS</span><div class="stat-number" id="stat-total">0</div><div class="stat-foot">Since demo database reset</div></div>
+        <div class="stat"><span class="stat-label">VERIFIED ACTIONS</span><div class="stat-number accent-green" id="stat-verified">0</div><div class="stat-foot">Virtual readback complete</div></div>
+        <div class="stat"><span class="stat-label">POLICY GATE</span><div class="stat-number stat-small">ENFORCED</div><div class="stat-foot">Explicit operator approval</div></div>
+        <div class="stat"><span class="stat-label">EVIDENCE INTEGRITY</span><div class="stat-number stat-small" id="stat-integrity">CHECKING</div><div class="stat-foot">SHA-256 local audit chain</div></div>
+      </section>
+      <div class="content-grid">
+        <section class="panel simulator" id="operations">
+          <div class="panel-heading"><div><div class="eyebrow">01 / OBSERVATION</div><h2>Incident simulator</h2><p>Select a scenario to start a new governed workflow.</p></div><div class="micro-tag">SANDBOX</div></div>
+          <label class="field-label" for="scenario">DEMO SCENARIO</label><select id="scenario"><option value="door_propped">Pedestrian door held open</option><option value="camera_offline">Entry camera connectivity loss</option><option value="unverified_alert">Unverified access-control event</option></select>
+          <div class="camera-frame" aria-label="Synthetic zone schematic, not a camera feed"><div class="camera-head"><span class="camera-bullet"></span> DEMO-LAB / LOBBY A <span class="camera-head-right">SYNTHETIC FEED <span class="mini-square">▣</span></span></div><div class="camera-scene"><div class="scene-lines"></div><div class="scene-wall"></div><div class="scene-door"><div class="door-handle"></div></div><div class="scan-zone"><span class="label-scan">ZONE 01 / ENTRY</span></div><div class="scene-person"><span class="head"></span><span class="torso"></span><span class="legs"></span></div><span class="scene-stamp">ILLUSTRATION ONLY · NOT LIVE VIDEO</span></div><div class="camera-bottom"><span>CAM-01 <span class="dotsep">/</span> DOOR-CONTACT-01</span><span class="green-text">● FIXTURE READY</span></div></div>
+          <div class="field-row"><div><label class="field-label" for="mode">ANALYSIS ENGINE</label><select id="mode"><option value="deterministic">Deterministic local (free)</option><option value="ollama">Ollama local (optional)</option><option value="meta">Meta Muse Spark (opt-in API)</option></select></div><div><label class="field-label" for="operator">DEMO OPERATOR</label><input id="operator" maxlength="60" value="Demo operator" autocomplete="off" /></div></div>
+          <button id="create" class="primary-btn">Create synthetic incident <span>↗</span></button>
+          <p class="micro-note">Meta calls require MODEL_API_KEY and ALLOW_EXTERNAL_META=true on the server. Otherwise analysis transparently falls back to deterministic mode.</p>
+        </section>
+        <section class="panel workflow"><div class="panel-heading"><div><div class="eyebrow">02 / RESPONSE</div><h2>Governed lifecycle</h2><p>Every transition is a recorded event.</p></div><span id="incident-badge" class="micro-tag neutral">NO INCIDENT</span></div>
+          <div id="stage-list" class="stage-list" aria-label="Incident progress">
+            <div class="empty-workflow">Create an incident to begin the six-stage operational loop.</div>
+          </div>
+          <div id="incident-details" class="incident-details" hidden><div class="signal-title">INCIDENT CONTEXT <span id="incident-id"></span></div><h3 id="incident-title"></h3><div id="incident-signals" class="signal-list"></div><div class="narrative-box"><small>ANALYST REPORT <span id="provider-label"></span></small><p id="incident-narrative">Reasoning pending.</p></div><div class="workflow-actions"><button id="analyze" class="secondary-btn">Analyze incident</button><button id="approve" class="secondary-btn" disabled>Approve safe action</button><button id="execute" class="secondary-btn" disabled>Execute virtual action</button><button id="verify" class="secondary-btn" disabled>Verify independent readback</button></div></div>
+          <div id="toast" class="toast" role="status" aria-live="polite"></div>
+        </section>
+      </div>
+      <section class="panel evidence" id="evidence"><div class="panel-heading"><div><div class="eyebrow">03 / FORENSIC PROOF</div><h2>Proof, not promises.</h2><p>Local evidence with explicit simulation markers and hash-chain integrity.</p></div><button id="download" class="outline-btn" disabled>↓ Export JSON evidence</button></div><div class="audit-header"><span>INCIDENT</span><span>STATE</span><span>TRUTH SOURCE</span></div><div id="incident-log" class="incident-log"><div class="log-empty">No evidence recorded yet. Create a synthetic incident above.</div></div></section>
+      <footer><div>InnerOS × InnerChispa <span>·</span> Meta Global AI Developer Hackathon 2026</div><div>LOCAL-FIRST <span> / </span> HUMAN-GOVERNED <span> / </span> VERIFIABLE</div></footer>
+    </div>
+  </main>
+</div>
+</body>
+</html>

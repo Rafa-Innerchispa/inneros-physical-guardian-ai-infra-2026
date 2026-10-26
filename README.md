@@ -1,199 +1,118 @@
-# InnerOS Physical Guardian — AI Infra Summit 2026
+# InnerOS Autonomous Infrastructure Guardian | Meta Global AI Developer Hackathon 2026
 
-<!-- INNEROS-NARRATIVE:START -->
-> **InnerOS role:** R&D / Hackathon Validation  
-> **Lifecycle:** Submission snapshot  
-> **Lineage:** AI Infra Summit 2026 validation track for the Physical Guardian / VigilOS product line.
->
-> This repository demonstrates the physical-world perception, policy, approval, action, verification, and evidence loop that feeds the maintained Physical Guardian product.
->
-> **InnerOS principle:** hackathons are validation environments. Reusable capabilities are extracted into maintained products and platform layers rather than treated as disconnected one-off projects.
-<!-- INNEROS-NARRATIVE:END -->
+**From AI that answers to AI that safely operates the physical world.**
 
+![Build status](https://img.shields.io/badge/runtime-Python%203.10%2B-blue) ![Operational truth](https://img.shields.io/badge/demo-synthetic%20only-yellow) ![External spend](https://img.shields.io/badge/Meta%20API-opt--in-green)
 
-**Live hackathon build. Functional judge demo.**
+> **Hackathon entry, Oct 26 – Nov 4, 2026.** Independent local-first demo for the Meta Global AI Developer Hackathon, built by InnerChispa. This is a new hackathon-specific composition, **not** a claim that InnerOS's earlier work was created during this event. See [PROVENANCE](docs/PROVENANCE.md).
 
-> **Continuity first:** a new chat/agent must read `docs/PROJECT_CONTINUITY.md` before changing code. It records the permanent-product vs hackathon boundary, canonical SHAs, sponsor strategy, on-site sequence and safety invariants.
+The system turns synthetic observations from cameras, access controls and networks into a governed operational flow:
 
-> **Event freeze:** the team is officially confirmed for the **SiMa.ai onsite track**. Read `docs/EVENT_FREEZE_2026-09-14.md` before making any pre-judge change. Do not submit this project through the LabLab online Intel flow.
+`OBSERVE → REASON → APPROVE → ACT → VERIFY → PROVE`
 
-Speechmatics is an optional bonus lane. Guardian remains fully usable without Speechmatics, sponsor hardware or an external network.
+The same policy gate is used regardless of which inference provider generates the explanation. The demo **never** operates a real door, camera or building network.
 
-InnerOS Physical Guardian turns existing cameras and building sensors into governed Physical AI without forcing customers to replace their security infrastructure.
-
-> **SEE → UNDERSTAND OVER TIME → DECIDE UNDER POLICY → ACT → VERIFY → PROVE**
-
-## Run the judge application
-
-Requires Python 3.11+ and no third-party Python package for the demo runtime.
+## Live demo locally (zero dependencies)
 
 ```bash
-python3 scripts/run_demo.py
+cd inneros-meta-guardian-2026
+PYTHONPATH=src python -m inneros_meta_guardian.web
 ```
 
-Open `http://127.0.0.1:8787`.
+Open **http://127.0.0.1:8787**. Select a scenario, create an incident, analyze using the deterministic local engine, approve the safe recommended action, execute the virtual actuator, independently verify it, and export a JSON evidence bundle.
 
-Before presenting, exercise the exact governed lifecycle with:
+Supported scenarios:
+
+1. Pedestrian door propped open, with camera zone occupancy.
+2. PoE camera offline, but uplink healthy.
+3. Unverified visitor badge event (explicitly **does not open gate**).
+
+## Test without paid APIs
 
 ```bash
-python3 scripts/judge_rehearsal.py
+PYTHONPATH=src python -m unittest discover -s tests -v
+# In another terminal after starting the server:
+PYTHONPATH=src python scripts/e2e_smoke.py
 ```
 
-When real SiMa inference and Physical I/O readback are connected, the strict truth gate is:
+## Optional local Ollama inference
 
 ```bash
-python3 scripts/judge_rehearsal.py --runtime sima-slot --require-measured-sponsor --require-live-physical
+# Use any locally downloaded Ollama model, e.g. qwen2.5:7b.
+export OLLAMA_MODEL=qwen2.5:7b
+PYTHONPATH=src python -m inneros_meta_guardian.web
 ```
 
-The complete demo must not be described as live if that strict gate fails.
+Select **Ollama local** in the web UI. Unavailable models fail over to deterministic reasoning with an explicit fallback label. This does not authorize additional operations.
 
-The single-screen WebUI includes:
+## Optional Meta Model API inference
 
-- camera/sensor scenario visualization;
-- normalized perception state;
-- temporal/policy reasoning;
-- explicit human action approval;
-- bounded reference or permanent-product Physical I/O;
-- verification/readback state;
-- forensic evidence bundle with truth labels;
-- replaceable SiMa.ai, Qualcomm and Intel runtime slots;
-- measured composition timings clearly separated from simulated data.
-
-## Zero-dependency acceptance check
-
-A clean Python host can validate the application without installing pytest or any package:
+**Do not configure this until credits appear in Billing and you have explicitly approved API consumption.**
 
 ```bash
-python3 scripts/self_test.py
+export MODEL_API_KEY='[put key here, NEVER in a Git commit]'
+export ALLOW_EXTERNAL_META=true
+export META_MODEL=muse-spark-1.3
+PYTHONPATH=src python -m inneros_meta_guardian.web
 ```
 
-The acceptance script boots ephemeral loopback servers and verifies the offline runtime, human approval gate, safe reject path, dangerous-action fail-closed behavior, permanent-product Physical I/O contract/readback, WebUI delivery, HTTP demo flow, evidence production and optional hosted authentication.
+Select **Meta Muse Spark** in the web UI. The adapter uses Meta's official Responses API at `https://api.meta.ai/v1/responses`. It sends only the synthetic fixture, never device passwords, identifiable people, or real customer streams. API calls require an account and payment method. The SDK is not required: Python `urllib` is used to avoid extra dependencies. The `MODEL_API_KEY` remains server-side in the environment.
 
-The developer test suite remains available when pytest is installed:
+* Official Meta Model API overview: https://dev.meta.ai/docs
+* Official API quickstart: https://dev.meta.ai/docs/quickstart
+* Event page: https://cerebralvalley.ai/e/meta-ai-developer-hackathon
+
+## Container demo (local loopback only)
 
 ```bash
-python3 -m pytest -q
+docker compose up --build
 ```
 
-## Why this architecture matters
+WebUI is bound to `127.0.0.1:8787` on the host. **Never publish the demo directly to the public Internet**: it intentionally has no login, only synthetic input and in-process virtual actuators. Add authentication and rate limiting before any public judge link. Never enable `GUARDIAN_UNSAFE_BIND` outside an isolated demonstration container or secure reverse proxy.
 
-Most buildings do not need another camera platform. They need an intelligence and control layer that can work with the cameras, NVRs, DVRs and sensors they already own.
+## Architecture
 
-The permanent Physical Guardian product supplies reusable capabilities for camera ingestion, RTSP/ONVIF, event normalization, detection, tracking, zones, temporal behavior, low-cost edge transport, policy, physical I/O and evidence.
-
-This hackathon repository does **not** copy that product. It implements the hackathon-specific composition, sponsor runtime boundary, judge experience, evidence presentation and deployment path.
-
-Permanent product:
-
-`Rafa-Innerchispa/inneros-physical-guardian`
-
-Hackathon composition:
-
-`Rafa-Innerchispa/inneros-physical-guardian-ai-infra-2026`
-
-## Runtime portability
-
-The judge app has one offline-safe deterministic runtime plus local-only sponsor SDK bridges.
-
-| Runtime | Default state | On-site binding |
-| --- | --- | --- |
-| InnerOS deterministic fixture | Ready | none |
-| SiMa.ai | Track confirmed; awaiting onsite DevKit/SDK binding | `GUARDIAN_SIMA_RUNTIME_URL` |
-| Qualcomm | Awaiting hardware/SDK | `GUARDIAN_QUALCOMM_RUNTIME_URL` |
-| Intel | Awaiting hardware/SDK | `GUARDIAN_INTEL_RUNTIME_URL` |
-
-A sponsor sidecar exposes `POST /infer` on loopback. Once configured, the corresponding runtime becomes selectable in the WebUI without changing Guardian policy, approval, verification or evidence code.
-
-See `docs/SPONSOR_RUNTIME_BRIDGE.md`.
-
-## Permanent-product Physical I/O
-
-The judge app can optionally use the permanent Physical Guardian HTTP I/O contract after human approval:
-
-```bash
-export GUARDIAN_PHYSICAL_IO_URL=http://127.0.0.1:8765
-python3 scripts/run_demo.py
+```
+Synthetic incident fixture / future scoped MCP reader
+      │
+      ▼
+Stateful Guardian lifecycle engine ────────→ SQLite incident state
+      │                                            │
+      ▼                                            ▼
+Local deterministic reasoning                SHA-256 audit chain
+  ├── optional Ollama local model                  │
+  └── optional Meta Muse Spark 1.3                 └── JSON evidence bundle
+      │
+      ▼
+Fixed allowlist + human approval
+      │
+      ▼
+Virtual actuator (NO real I/O)
+      │
+      ▼
+Independent virtual-state readback
 ```
 
-The bridge is loopback-only. For mapped low-impact actions it performs `/v1/action` followed by `/v1/verify`; a failed readback ends as `ACTION_FAILED_SAFE` rather than silently reverting to a simulated success.
+### What is proven today vs. not yet built
 
-Truth is explicit:
+| Capability | Status | Truth label |
+|---|---|---|
+| Full six-stage demo | Implemented and locally testable | `SIMULATED_FIXTURE` |
+| Persistent SQLite incident/audit log | Implemented | `DEMO_HASH_CHAIN_NOT_PRODUCTION_ATTESTATION` |
+| Approval/forbidden action policy | Implemented | `DETERMINISTIC_RULE` |
+| Virtual actuator and independent in-process readback | Implemented | `SIMULATED_REFERENCE_IO` |
+| Ollama local reasoning | Adapter implemented; endpoint not exercised on physical AMD host yet | `LOCAL_MODEL_FROM_SIMULATED_SIGNALS` only when real call succeeds |
+| Meta Model API reasoning | Adapter implemented; live key/credits not tested | `MODEL_GENERATED_FROM_SIMULATED_SIGNALS` only when real call succeeds |
+| SAM 3.1 camera segmentation | **Planned, not integrated** | Not claimed |
+| Live MCP device read and real hardware readback | **Planned, not integrated** | Not claimed |
+| Published external judge URL | **Not deployed** | Not claimed |
 
-- `SIMULATED_REFERENCE_IO` — offline fallback;
-- `PRODUCT_HTTP_READBACK` — permanent HTTP contract action + verified software readback;
-- `REAL_LOW_VOLTAGE_HARDWARE` — reserved for an endpoint that explicitly verifies actual low-voltage hardware;
-- `FAILED_CLOSED` — configured I/O could not be verified.
+## Security and scope
 
-See `docs/PHYSICAL_IO_BRIDGE.md`.
+* Fail closed: no gate opening, door unlocking, firewall changes, reboots or shell commands.
+* A model's text can never bypass deterministic policy or human approval.
+* All incidents are clearly labeled synthetic. Meta and Ollama providers have distinguishable truth labels; fallback is explicitly recorded.
+* No biometrics, customer images, credentials or internal network topology in the repository.
+* Tests and API use need no external spend by default.
 
-## Truth and benchmark discipline
-
-The default judge path intentionally labels:
-
-- camera event: `SIMULATED_FIXTURE`;
-- offline detections: `SIMULATED_FIXTURE`;
-- policy/temporal logic: `DETERMINISTIC_RULE`;
-- demo physical output: `SIMULATED_REFERENCE_IO` until the permanent I/O contract or safe electronics are attached;
-- composition timings: measured live;
-- sponsor benchmark: not claimed until real assigned hardware produces repeatable measurements.
-
-The system will fail closed rather than fabricate sponsor or physical-output success.
-
-## Safety boundary
-
-Judge actions are low-impact and allowlisted: beacon warning, operator notification and reference attention light. Door unlock, alarm disable, arbitrary shell execution and gate opening are explicitly denied in the demo policy.
-
-Human approval is required before the demo ACT stage can complete. After an interruption, resume is denied until the safe state has been explicitly re-verified.
-
-## Hosted judge mode
-
-Optional HTTP Basic access control is configured only through environment variables:
-
-```bash
-export GUARDIAN_DEMO_USER="judge"
-export GUARDIAN_DEMO_PASSWORD="<secret-outside-git>"
-python3 scripts/run_demo.py --host 0.0.0.0 --port 8787
-```
-
-Canonical container recipe: root `Dockerfile`.
-
-Deployment details: `DEPLOYMENT.md` and `docs/HOSTED_JUDGE_DEPLOY.md`.
-
-## Current hackathon build artifacts
-
-- `app/` — single-screen judge WebUI;
-- `src/guardian_demo/` — demo engine, sponsor runtime boundary, Physical I/O bridge, voice lane and HTTP server;
-- `scripts/run_demo.py` — one-command application start;
-- `scripts/judge_rehearsal.py` — lifecycle rehearsal + strict live truth gate;
-- `scripts/event_preflight.py` — event readiness without exposing secrets;
-- `scripts/sima_onsite_preflight.py` — SiMa host/device readiness;
-- `scripts/sima_capture_evidence.py` — sponsor evidence/benchmark capture with truth gating;
-- `scripts/speechmatics_voice_live.py` — official Speechmatics live microphone bridge;
-- `scripts/self_test.py` — zero-dependency acceptance test;
-- `scripts/mock_sponsor_sidecar.py` — contract-only sponsor sidecar harness;
-- `tests/` — safety/runtime/server/Physical-I/O/voice/onsite developer checks;
-- `docs/PROJECT_CONTINUITY.md` — canonical handoff for future chats/agents;
-- `docs/EVENT_FREEZE_2026-09-14.md` — final scope freeze, SiMa bring-up order and judge truth gates;
-- `docs/JUDGE_DEMO_RUNBOOK.md` — current 90-second SiMa + Speechmatics judge flow;
-- `docs/SPONSOR_RUNTIME_BRIDGE.md` — on-site SDK integration contract;
-- `docs/PHYSICAL_IO_BRIDGE.md` — permanent-product action/readback integration;
-- `PREEXISTING_DISCLOSURE.md` and `BASELINE_PROVENANCE.json` — frozen provenance boundary.
-
-## Pre-existing work disclosure
-
-This project existed before the hackathon as the permanent InnerOS Physical Guardian product. The pre-kickoff baseline is explicitly disclosed instead of being passed off as work created during the competition.
-
-See:
-
-- `PREEXISTING_DISCLOSURE.md`
-- `BASELINE_PROVENANCE.json`
-- `HACKATHON_SCOPE.md`
-- `docs/PROJECT_BRIEF.md`
-- `docs/TRACK_STRATEGY.md`
-- `docs/ONSITE_HARDWARE_PLAYBOOK.md`
-
-## Team
-
-**InnerOS Physical Guardian**
-
-The team is intentionally kept small. Priority additions are a fluent English technical presenter and hands-on Edge AI / embedded optimization talent who can contribute directly to the existing build.
+See [architecture](docs/ARCHITECTURE.md), [provenance](docs/PROVENANCE.md), and [submission checklist](docs/SUBMISSION.md).

@@ -1,0 +1,15 @@
+services:
+  guardian:
+    build: .
+    environment:
+      HOST: 0.0.0.0
+      GUARDIAN_UNSAFE_BIND: "true"
+      GUARDIAN_DB: /app/runtime/guardian.db
+      ALLOW_EXTERNAL_META: "false"
+    ports:
+      - "127.0.0.1:8787:8787"
+    volumes:
+      - guardian_demo_data:/app/runtime
+    restart: unless-stopped
+volumes:
+  guardian_demo_data:
